@@ -1,14 +1,16 @@
+import Link from "next/link";
+
 const navItems = [
-  "Create Parade",
-  "Mission Control",
-  "Entries",
-  "Staging",
-  "Sections",
-  "Messages",
-  "Live Map",
-  "Announcer",
-  "Judges",
-  "Reports",
+  { label: "Create Parade", href: "/create-parade" },
+  { label: "Mission Control", href: "/" },
+  { label: "Entries", href: "/entries" },
+  { label: "Staging", href: "/staging" },
+  { label: "Sections", href: "/sections" },
+  { label: "Messages", href: "/messages" },
+  { label: "Live Map", href: "/live-map" },
+  { label: "Announcer", href: "/announcer" },
+  { label: "Judges", href: "/judges" },
+  { label: "Reports", href: "/reports" },
 ];
 
 export function Sidebar() {
@@ -23,12 +25,13 @@ export function Sidebar() {
 
       <nav className="mt-10 space-y-2">
         {navItems.map((item) => (
-          <button
-            key={item}
-            className="w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-300 hover:bg-slate-900 hover:text-white"
+          <Link
+            key={item.href}
+            href={item.href}
+            className="block w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-300 hover:bg-slate-900 hover:text-white"
           >
-            {item}
-          </button>
+            {item.label}
+          </Link>
         ))}
       </nav>
     </aside>
