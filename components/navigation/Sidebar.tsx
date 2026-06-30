@@ -17,12 +17,14 @@ const navItems = [
 export function Sidebar() {
   return (
     <aside className="hidden min-h-screen w-72 border-r border-slate-800 px-6 py-8 md:block">
-      <div>
-        <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+      <Link href="/" className="block transition hover:opacity-80">
+        <p className="text-sm font-black uppercase tracking-[0.4em] text-white">
           ParadeOne
         </p>
-        <h1 className="mt-3 text-2xl font-bold">Mission Control</h1>
-      </div>
+        <h1 className="mt-3 text-2xl font-semibold text-slate-300">
+          Mission Control
+        </h1>
+      </Link>
 
       <nav className="mt-10 space-y-2">
         {navItems.map((item) => (
