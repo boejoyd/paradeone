@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
 
@@ -40,23 +42,30 @@ export default async function OrganizationPage({
         ]}
       />
 
-      <div className="mb-10">
-        <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
-          Organization
-        </p>
-        <h2 className="mt-4 text-5xl font-bold tracking-tight">
-          {organization.name}
-        </h2>
-        <p className="mt-4 text-lg text-slate-300">/{organization.slug}</p>
+      <div className="mb-10 flex items-start justify-between gap-8">
+        <div>
+          <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
+            Organization
+          </p>
+          <h2 className="mt-4 text-5xl font-bold tracking-tight">
+            {organization.name}
+          </h2>
+          <p className="mt-4 text-lg text-slate-300">/{organization.slug}</p>
+        </div>
+
+        <Link href="/create-parade">
+          <Button>Create Parade</Button>
+        </Link>
       </div>
 
       <Card title="Parades">
         {events && events.length > 0 ? (
           <div className="mt-4 grid gap-3">
             {events.map((event) => (
-              <div
+              <Link
                 key={event.id}
-                className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                href={`/organizations/${organization.slug}/parades/${event.id}`}
+                className="block rounded-xl border border-slate-800 bg-slate-950 p-4 transition hover:border-blue-500 hover:bg-slate-900"
               >
                 <h3 className="text-lg font-semibold text-white">
                   {event.name}
@@ -68,7 +77,7 @@ export default async function OrganizationPage({
                 <p className="mt-2 text-xs uppercase tracking-wide text-slate-500">
                   {event.status}
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (
