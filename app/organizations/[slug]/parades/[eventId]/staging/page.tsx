@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
 import { StagingMap } from "@/components/staging/StagingMap";
+import { LiveStagingMap } from "@/components/maps/LiveStagingMap";
 
 type StagingPageProps = {
   params: Promise<{
@@ -69,9 +70,12 @@ export default async function StagingPage({ params }: StagingPageProps) {
       </div>
 
 	<div className="mb-8">
+	  <LiveStagingMap spots={spots || []} />
+	</div>
+	
+	<div className="mb-8">
 	  <StagingMap spots={spots || []} />
 	</div>
-
       <Card title="Staging Spots">
         {spots && spots.length > 0 ? (
           <div className="mt-6 grid gap-3">
