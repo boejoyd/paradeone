@@ -40,6 +40,14 @@ export default async function ParadePage({ params }: ParadePageProps) {
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId);
 
+  const { count: checkedInCount } = await supabase
+    .from("entries")
+    .select("*", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .eq("check_in_status", "checked_in");
+
+  const missingCount = (entryCount || 0) - (checkedInCount || 0);
+
   return (
     <AppShell>
       <Breadcrumbs
@@ -76,9 +84,9 @@ export default async function ParadePage({ params }: ParadePageProps) {
       </div>
 
       <div className="mb-8 grid gap-6 md:grid-cols-4">
-        <StatCard label="Status" value={event.status} />
         <StatCard label="Entries" value={entryCount || 0} />
-        <StatCard label="Expected" value={event.expected_entries || 0} />
+        <StatCard label="Checked In" value={checkedInCount || 0} />
+        <StatCard label="Missing" value={missingCount} />
         <StatCard label="Sections" value={event.staging_sections || 0} />
       </div>
 
@@ -98,8 +106,8 @@ export default async function ParadePage({ params }: ParadePageProps) {
 
         <Card title="Entries">
           <p>
-            Manage participants, contact information, float types, and announcer
-            scripts.
+            Manage participants, contact information, float types, announcer
+            scripts, and self check-in links.
           </p>
 
           <div className="mt-5">
@@ -109,23 +117,23 @@ export default async function ParadePage({ params }: ParadePageProps) {
           </div>
         </Card>
 
-<Card title="Staging">
-  <p>
-    Create staging spots, assign GPS coordinates, define geofences, and prepare
-    parade-day check-ins.
-  </p>
+        <Card title="Staging">
+          <p>
+            Create staging spots, assign GPS coordinates, define geofences, and
+            prepare parade-day check-ins.
+          </p>
 
-  <div className="mt-5">
-    <Link href={`/organizations/${slug}/parades/${eventId}/staging`}>
-      <Button variant="secondary">Open Staging</Button>
-    </Link>
-  </div>
-</Card>
-        <Card title="Parade Day">
-          Live check-ins, section releases, GPS movement, and SMS alerts will
-          eventually flow through this Mission Control screen.
+          <div className="mt-5">
+            <Link href={`/organizations/${slug}/parades/${eventId}/staging`}>
+              <Button variant="secondary">Open Staging</Button>
+            </Link>
+          </div>
         </Card>
 
+        <Card title="Parade Day">
+          Live check-ins, section releases, GPS movement, and SMS alerts will
+          flow through this Mission Control screen.
+        </Card>
       </div>
     </AppShell>
   );

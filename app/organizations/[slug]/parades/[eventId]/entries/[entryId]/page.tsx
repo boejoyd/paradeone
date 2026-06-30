@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
 import { assignStagingSpot } from "./actions";
+
 
 type EntryDetailPageProps = {
   params: Promise<{
@@ -109,6 +111,21 @@ export default async function EntryDetailPage({ params }: EntryDetailPageProps) 
             {entry.announcer_script || "No announcer script yet."}
           </p>
         </Card>
+
+<Card title="Self Check-In">
+  <p>
+    Share this check-in page with the entry contact on parade day. GPS check-in
+    will only succeed near the assigned staging spot.
+  </p>
+
+  <div className="mt-5">
+    <Link href={`/check-in/${entry.id}`}>
+      <Button variant="secondary">Open Self Check-In Page</Button>
+    </Link>
+  </div>
+</Card>
+
+
       </div>
     </AppShell>
   );
