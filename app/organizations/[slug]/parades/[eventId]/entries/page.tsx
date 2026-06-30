@@ -76,9 +76,10 @@ export default async function EntriesPage({ params }: EntriesPageProps) {
         {entries && entries.length > 0 ? (
           <div className="mt-4 grid gap-3">
             {entries.map((entry) => (
-              <div
+              <Link
                 key={entry.id}
-                className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                href={`/organizations/${slug}/parades/${eventId}/entries/${entry.id}`}
+                className="block rounded-xl border border-slate-800 bg-slate-950 p-4 transition hover:border-blue-500 hover:bg-slate-900"
               >
                 <h3 className="text-lg font-semibold text-white">
                   {entry.name}
@@ -89,7 +90,7 @@ export default async function EntriesPage({ params }: EntriesPageProps) {
                 <p className="mt-2 text-xs uppercase tracking-wide text-slate-500">
                   {entry.status}
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (
