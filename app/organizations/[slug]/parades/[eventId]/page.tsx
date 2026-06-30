@@ -22,9 +22,7 @@ export default async function ParadePage({ params }: ParadePageProps) {
     .eq("slug", slug)
     .single();
 
-  if (organizationError) {
-    throw new Error(organizationError.message);
-  }
+  if (organizationError) throw new Error(organizationError.message);
 
   const { data: event, error: eventError } = await supabase
     .from("events")
@@ -35,18 +33,12 @@ export default async function ParadePage({ params }: ParadePageProps) {
     .eq("organization_id", organization.id)
     .single();
 
-  if (eventError) {
-    throw new Error(eventError.message);
-  }
+  if (eventError) throw new Error(eventError.message);
 
-  const { count: entryCount, error: entryCountError } = await supabase
+  const { count: entryCount } = await supabase
     .from("entries")
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId);
-
-  if (entryCountError) {
-    throw new Error(entryCountError.message);
-  }
 
   return (
     <AppShell>
@@ -72,9 +64,15 @@ export default async function ParadePage({ params }: ParadePageProps) {
           </p>
         </div>
 
-        <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
-          <Button>Manage Entries</Button>
-        </Link>
+        <div className="flex gap-3">
+          <Link href={`/organizations/${slug}/parades/${eventId}/lineup`}>
+            <Button>Open Lineup</Button>
+          </Link>
+
+          <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
+            <Button variant="secondary">Manage Entries</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mb-8 grid gap-6 md:grid-cols-4">
@@ -85,10 +83,23 @@ export default async function ParadePage({ params }: ParadePageProps) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        <Card title="Lineup Builder">
+          <p>
+            Build the official parade order, assign parade numbers, and prepare
+            entries for staging.
+          </p>
+
+          <div className="mt-5">
+            <Link href={`/organizations/${slug}/parades/${eventId}/lineup`}>
+              <Button variant="secondary">Open Lineup</Button>
+            </Link>
+          </div>
+        </Card>
+
         <Card title="Entries">
           <p>
-            Manage parade participants, contact information, float types, and
-            announcer scripts.
+            Manage participants, contact information, float types, and announcer
+            scripts.
           </p>
 
           <div className="mt-5">
@@ -96,11 +107,6 @@ export default async function ParadePage({ params }: ParadePageProps) {
               <Button variant="secondary">Open Entries</Button>
             </Link>
           </div>
-        </Card>
-
-        <Card title="Operations Briefing">
-          This is where ParadeOne will summarize what needs attention for this
-          parade.
         </Card>
 
         <Card title="Staging">
