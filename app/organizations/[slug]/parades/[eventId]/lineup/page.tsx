@@ -87,7 +87,10 @@ const { data: entries, error } = await supabase
         {entries && entries.length > 0 ? (
           <div className="mt-6 grid gap-3">
             {entries.map((entry, index) => {
-              const paradeNumber = entry.parade_number || index + 1;
+		const paradeNumber = entry.parade_number || index + 1;
+		const assignedSpot = Array.isArray(entry.staging_spots)
+		  ? entry.staging_spots[0]
+		  : entry.staging_spots;
 
               return (
                 <div
@@ -111,8 +114,8 @@ const { data: entries, error } = await supabase
                       {entry.entry_type} • {entry.status}
                     </p>
                     <p className="mt-2 text-sm text-slate-500">
-			Section: {entry.staging_spots?.section || entry.section || "Unassigned"} • Spot:{" "}
-{entry.staging_spots?.spot_code || entry.staging_spot || "Unassigned"}
+			Section: {assignedSpot?.section || entry.section || "Unassigned"} • Spot:{" "}
+{assignedSpot?.spot_code || entry.staging_spot || "Unassigned"}
                     </p>
                   </div>
 
