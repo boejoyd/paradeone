@@ -1,13 +1,19 @@
-export const dynamic = "force-dynamic";
-
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
-import { getEvents } from "@/lib/data/events";
+import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 
 export default async function Home() {
-  const events = await getEvents();
+  const { data: events, error } = await supabase
+    .from("events")
+    .select("id, name, event_date, status, city")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   return (
     <AppShell>
@@ -20,54 +26,52 @@ export default async function Home() {
             Mission Control
           </h2>
           <p className="mt-4 max-w-2xl text-lg text-slate-300">
-            Real parades. Real operations. Real-time coordination.
+            Real-time parade registration, staging, communication, and operations.
           </p>
         </div>
 
-        <a href="/create-parade">
+        <Link href="/create-parade">
           <Button>Create Parade</Button>
-        </a>
+        </Link>
       </div>
 
       <div className="mb-8 grid gap-6 md:grid-cols-4">
-        <StatCard label="Events" value={events.length} />
+        <StatCard label="Events" value={events?.length || 0} />
         <StatCard label="Entries" value="0" />
         <StatCard label="Checked In" value="0" />
         <StatCard label="Sections" value="0" />
       </div>
 
       <div className="grid gap-6">
-        <Card title="Upcoming Parades">
-          {events.length === 0 ? (
-            <p>No parades created yet.</p>
-          ) : (
-            <div className="mt-4 grid gap-4">
+        <Card title="Your Parades">
+          {events && events.length > 0 ? (
+            <div className="mt-4 grid gap-3">
               {events.map((event) => (
                 <div
                   key={event.id}
                   className="rounded-xl border border-slate-800 bg-slate-950 p-4"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
                       <h3 className="text-lg font-semibold text-white">
                         {event.name}
                       </h3>
                       <p className="mt-1 text-sm text-slate-400">
-			{event.organization_name || "No organization"} • {event.city || "No city set"}
+                        {event.city || "No city set"} •{" "}
+                        {event.event_date || "No date set"}
                       </p>
                     </div>
-
-                    <span className="rounded-full border border-slate-700 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
+                    <span className="rounded-full border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-300">
                       {event.status}
                     </span>
                   </div>
-
-                  <p className="mt-4 text-sm text-slate-400">
-                    Date: {event.event_date || "Not scheduled"}
-                  </p>
                 </div>
               ))}
             </div>
+          ) : (
+            <p className="mt-4 text-slate-400">
+              No parades yet. Create your first parade to begin.
+            </p>
           )}
         </Card>
       </div>
