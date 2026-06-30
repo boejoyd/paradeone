@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { saveCheckIn } from "@/app/check-in/[entryId]/actions";
 
 type CheckInClientProps = {
   entryId: string;
@@ -35,12 +36,14 @@ function distanceInFeet(
 }
 
 export function CheckInClient({
+  entryId,
   spotLatitude,
   spotLongitude,
   geofenceRadiusFeet,
 }: CheckInClientProps) {
   const [message, setMessage] = useState("");
   const [distance, setDistance] = useState<number | null>(null);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
 
   function checkLocation() {
     if (!spotLatitude || !spotLongitude) {
@@ -56,7 +59,7 @@ export function CheckInClient({
     setMessage("Checking your location...");
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const currentDistance = distanceInFeet(
           position.coords.latitude,
           position.coords.longitude,
@@ -66,11 +69,22 @@ export function CheckInClient({
 
         setDistance(currentDistance);
 
-        if (currentDistance <= geofenceRadiusFeet) {
-          setMessage("You are in the correct staging spot. Check-in allowed.");
-        } else {
+        if (currentDistance > geofenceRadiusFeet) {
           setMessage("You are not close enough to your assigned spot yet.");
+          return;
         }
+
+        setMessage("You are in the correct staging spot. Saving check-in...");
+
+        await saveCheckIn({
+          entryId,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          distanceFromSpotFeet: currentDistance,
+        });
+
+        setIsCheckedIn(true);
+        setMessage("You are checked in. Please remain in your assigned spot.");
       },
       () => {
         setMessage("Location permission was denied or unavailable.");
@@ -83,7 +97,9 @@ export function CheckInClient({
 
   return (
     <div className="mt-6 grid gap-4">
-      <Button onClick={checkLocation}>Check My Location</Button>
+      <Button onClick={checkLocation}>
+        {isCheckedIn ? "Checked In" : "Check In"}
+      </Button>
 
       {distance !== null && (
         <p className="text-slate-400">
