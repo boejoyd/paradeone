@@ -1,3 +1,9 @@
+type AssignedEntry = {
+  id: string;
+  name: string;
+  check_in_status: string | null;
+};
+
 type StagingSpot = {
   id: string;
   spot_code: string;
@@ -5,6 +11,7 @@ type StagingSpot = {
   street_name: string | null;
   geofence_radius_feet: number;
   reserved_length_feet: number | null;
+  entries?: AssignedEntry[] | AssignedEntry | null;
 };
 
 type StagingMapProps = {
@@ -53,11 +60,16 @@ export function StagingMap({ spots }: StagingMapProps) {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {sectionSpots.map((spot) => (
-                <div
-                  key={spot.id}
-                  className="rounded-2xl border border-slate-700 bg-slate-950 p-4"
-                >
+		{sectionSpots.map((spot) => {
+  		const assignedEntry = Array.isArray(spot.entries)
+ 		   ? spot.entries[0]
+		   : spot.entries;
+		  const status = assignedEntry?.check_in_status || "empty";
+		  return (
+		    <div
+		      key={spot.id}
+		      className="rounded-2xl border border-slate-700 bg-slate-950 p-4"
+		    >
                   <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
                     Spot
                   </p>
@@ -67,11 +79,20 @@ export function StagingMap({ spots }: StagingMapProps) {
                   <p className="mt-2 text-sm text-slate-400">
                     {spot.street_name || "No street assigned"}
                   </p>
+		<p className="mt-3 text-sm font-semibold text-white">
+		  {assignedEntry?.name || "Empty Spot"}
+		</p>
+
+		<p className="mt-2 text-xs uppercase tracking-wide text-slate-500">
+		  {status}
+		</p>
                   <p className="mt-3 text-xs text-slate-500">
                     Radius: {spot.geofence_radius_feet} ft
                   </p>
-                </div>
-              ))}
+		  </div>
+		  );
+		})}
+
             </div>
           </div>
         ))}

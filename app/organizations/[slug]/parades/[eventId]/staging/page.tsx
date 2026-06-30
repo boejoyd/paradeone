@@ -30,7 +30,10 @@ export default async function StagingPage({ params }: StagingPageProps) {
 
   const { data: spots, error } = await supabase
     .from("staging_spots")
-    .select("id, spot_code, section, street_name, latitude, longitude, geofence_radius_feet, reserved_length_feet")
+	.select(
+  	"id, spot_code, section, street_name, latitude, longitude, geofence_radius_feet, reserved_length_feet, entries(id, name, check_in_status)"
+		)
+
     .eq("event_id", eventId)
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("spot_code", { ascending: true });
