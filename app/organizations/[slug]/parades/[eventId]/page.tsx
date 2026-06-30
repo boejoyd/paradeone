@@ -109,15 +109,23 @@ export default async function ParadePage({ params }: ParadePageProps) {
           </div>
         </Card>
 
-        <Card title="Staging">
-          Sections, staging spots, geofences, and assigned lineup positions will
-          attach to this parade.
-        </Card>
+<Card title="Staging">
+  <p>
+    Create staging spots, assign GPS coordinates, define geofences, and prepare
+    parade-day check-ins.
+  </p>
 
+  <div className="mt-5">
+    <Link href={`/organizations/${slug}/parades/${eventId}/staging`}>
+      <Button variant="secondary">Open Staging</Button>
+    </Link>
+  </div>
+</Card>
         <Card title="Parade Day">
           Live check-ins, section releases, GPS movement, and SMS alerts will
           eventually flow through this Mission Control screen.
         </Card>
+
       </div>
     </AppShell>
   );
