@@ -1,7 +1,9 @@
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
+import { assignStagingSpot } from "./actions";
 
 type EntryDetailPageProps = {
   params: Promise<{
@@ -33,9 +35,14 @@ export default async function EntryDetailPage({ params }: EntryDetailPageProps) 
     .eq("event_id", eventId)
     .single();
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
+
+  const { data: stagingSpots } = await supabase
+    .from("staging_spots")
+    .select("id, spot_code, section, street_name")
+    .eq("event_id", eventId)
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("spot_code", { ascending: true });
 
   return (
     <AppShell>
@@ -71,6 +78,30 @@ export default async function EntryDetailPage({ params }: EntryDetailPageProps) 
           <p>Type: {entry.entry_type}</p>
           <p>Status: {entry.status}</p>
           <p>Estimated Length: {entry.estimated_length_feet || "Not set"} ft</p>
+        </Card>
+
+        <Card title="Staging Assignment">
+          <form action={assignStagingSpot} className="mt-4 grid gap-4">
+            <input type="hidden" name="slug" value={slug} />
+            <input type="hidden" name="eventId" value={eventId} />
+            <input type="hidden" name="entryId" value={entryId} />
+
+            <select
+              name="stagingSpotId"
+              defaultValue={entry.staging_spot_id || ""}
+              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+            >
+              <option value="">Unassigned</option>
+              {stagingSpots?.map((spot) => (
+                <option key={spot.id} value={spot.id}>
+                  {spot.spot_code} — {spot.section || "No section"} —{" "}
+                  {spot.street_name || "No street"}
+                </option>
+              ))}
+            </select>
+
+            <Button>Assign Staging Spot</Button>
+          </form>
         </Card>
 
         <Card title="Announcer Script">
