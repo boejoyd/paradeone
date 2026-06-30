@@ -4,6 +4,7 @@ import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
+import { autoNumberLineup } from "./actions";
 
 type LineupPageProps = {
   params: Promise<{
@@ -36,9 +37,7 @@ export default async function LineupPage({ params }: LineupPageProps) {
     .order("lineup_position", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   return (
     <AppShell>
@@ -70,9 +69,17 @@ export default async function LineupPage({ params }: LineupPageProps) {
           </p>
         </div>
 
-        <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
-          <Button>Manage Entries</Button>
-        </Link>
+        <div className="flex gap-3">
+          <form action={autoNumberLineup}>
+            <input type="hidden" name="slug" value={slug} />
+            <input type="hidden" name="eventId" value={eventId} />
+            <Button>Auto Number</Button>
+          </form>
+
+          <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
+            <Button variant="secondary">Manage Entries</Button>
+          </Link>
+        </div>
       </div>
 
       <Card title="Official Lineup">
