@@ -28,14 +28,15 @@ export default async function LineupPage({ params }: LineupPageProps) {
     .eq("id", eventId)
     .single();
 
-  const { data: entries, error } = await supabase
-    .from("entries")
-    .select(
-      "id, name, entry_type, status, parade_number, lineup_position, section, staging_spot, check_in_status"
-    )
-    .eq("event_id", eventId)
-    .order("lineup_position", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true });
+
+const { data: entries, error } = await supabase
+  .from("entries")
+  .select(
+    "id, name, entry_type, status, parade_number, lineup_position, section, staging_spot, check_in_status, staging_spots(spot_code, section, street_name)"
+  )
+  .eq("event_id", eventId)
+  .order("lineup_position", { ascending: true, nullsFirst: false })
+  .order("created_at", { ascending: true });
 
   if (error) throw new Error(error.message);
 
@@ -110,8 +111,8 @@ export default async function LineupPage({ params }: LineupPageProps) {
                       {entry.entry_type} • {entry.status}
                     </p>
                     <p className="mt-2 text-sm text-slate-500">
-                      Section: {entry.section || "Unassigned"} • Spot:{" "}
-                      {entry.staging_spot || "Unassigned"}
+			Section: {entry.staging_spots?.section || entry.section || "Unassigned"} • Spot:{" "}
+{entry.staging_spots?.spot_code || entry.staging_spot || "Unassigned"}
                     </p>
                   </div>
 
