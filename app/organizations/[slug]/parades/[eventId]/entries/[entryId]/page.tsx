@@ -124,7 +124,18 @@ export default async function EntryDetailPage({ params }: EntryDetailPageProps) 
     </Link>
   </div>
 </Card>
+<Card title="Participant View">
+  <p>
+    Share this page with the entry contact so they can see their parade number,
+    staging spot, announcer script, and check-in link.
+  </p>
 
+  <div className="mt-5">
+    <Link href={`/participant/${entry.id}`}>
+      <Button variant="secondary">Open Participant View</Button>
+    </Link>
+  </div>
+</Card>
 
       </div>
     </AppShell>
