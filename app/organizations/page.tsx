@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
+import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
-import Link from "next/link";
 
 export default async function OrganizationsPage() {
   const { data: organizations, error } = await supabase
@@ -16,16 +17,20 @@ export default async function OrganizationsPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Organizations" }]} />
+
       <div className="mb-10 flex items-start justify-between gap-8">
         <div>
           <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
             Workspaces
           </p>
+
           <h2 className="mt-4 text-5xl font-bold tracking-tight">
             Organizations
           </h2>
+
           <p className="mt-4 max-w-2xl text-lg text-slate-300">
-            Manage parade organizations and the events they operate.
+            Manage the organizations that operate one or more parades.
           </p>
         </div>
 
@@ -34,28 +39,27 @@ export default async function OrganizationsPage() {
         </Link>
       </div>
 
-      <Card title="Your Organizations">
+      <Card title="Organizations">
         {organizations && organizations.length > 0 ? (
-          <div className="mt-4 grid gap-3">
+          <div className="mt-6 grid gap-4">
             {organizations.map((organization) => (
-              <div
+              <Link
                 key={organization.id}
-                className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                href={`/organizations/${organization.slug}`}
+                className="block rounded-xl border border-slate-800 bg-slate-950 p-5 transition hover:border-blue-500 hover:bg-slate-900"
               >
-                <h3 className="text-lg font-semibold text-white">
+                <h3 className="text-xl font-semibold text-white">
                   {organization.name}
                 </h3>
-                <p className="mt-1 text-sm text-slate-400">
+
+                <p className="mt-2 text-sm text-slate-400">
                   /{organization.slug}
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (
-          <p className="mt-4 text-slate-400">
-            No organizations yet. Create a parade to create your first
-            organization.
-          </p>
+          <p className="mt-6 text-slate-400">No organizations exist yet.</p>
         )}
       </Card>
     </AppShell>
