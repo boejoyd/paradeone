@@ -51,7 +51,7 @@ export default async function Home() {
                         {event.name}
                       </h3>
                       <p className="mt-1 text-sm text-slate-400">
-                        {event.organizations?.name} • {event.city || "No city set"}
+			{event.organization_name || "No organization"} • {event.city || "No city set"}
                       </p>
                     </div>
 
