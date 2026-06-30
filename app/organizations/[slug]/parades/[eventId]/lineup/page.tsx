@@ -88,6 +88,8 @@ const { data: entries, error } = await supabase
           <div className="mt-6 grid gap-3">
             {entries.map((entry, index) => {
 		const paradeNumber = entry.parade_number || index + 1;
+		const previousEntry = entries[index - 1];
+		const nextEntry = entries[index + 1];
 		const assignedSpot = Array.isArray(entry.staging_spots)
 		  ? entry.staging_spots[0]
 		  : entry.staging_spots;
@@ -104,6 +106,19 @@ const { data: entries, error } = await supabase
                     <p className="mt-2 text-3xl font-bold text-white">
                       #{String(paradeNumber).padStart(3, "0")}
                     </p>
+		<p className="mt-2 text-sm text-slate-500">
+  		Follows:{" "}
+  		{previousEntry
+    		? `#${String(previousEntry.parade_number || index).padStart(3, "0")} ${previousEntry.name}`
+    		: "Start of parade"}
+		</p>
+
+		<p className="mt-1 text-sm text-slate-500">
+  		Ahead of:{" "}
+  		{nextEntry
+    		? `#${String(nextEntry.parade_number || index + 2).padStart(3, "0")} ${nextEntry.name}`
+    		: "End of parade"}
+		</p>
                   </div>
 
                   <div>
