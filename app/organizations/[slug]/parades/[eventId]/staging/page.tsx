@@ -4,6 +4,7 @@ import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
+import { StagingMap } from "@/components/staging/StagingMap";
 
 type StagingPageProps = {
   params: Promise<{
@@ -63,6 +64,10 @@ export default async function StagingPage({ params }: StagingPageProps) {
           <Button>Add Spot</Button>
         </Link>
       </div>
+
+	<div className="mb-8">
+	  <StagingMap spots={spots || []} />
+	</div>
 
       <Card title="Staging Spots">
         {spots && spots.length > 0 ? (
