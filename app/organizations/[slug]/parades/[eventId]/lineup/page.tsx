@@ -1,0 +1,129 @@
+import Link from "next/link";
+import { AppShell } from "@/components/layout/AppShell";
+import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { supabase } from "@/lib/supabase";
+
+type LineupPageProps = {
+  params: Promise<{
+    slug: string;
+    eventId: string;
+  }>;
+};
+
+export default async function LineupPage({ params }: LineupPageProps) {
+  const { slug, eventId } = await params;
+
+  const { data: organization } = await supabase
+    .from("organizations")
+    .select("name, slug")
+    .eq("slug", slug)
+    .single();
+
+  const { data: event } = await supabase
+    .from("events")
+    .select("name")
+    .eq("id", eventId)
+    .single();
+
+  const { data: entries, error } = await supabase
+    .from("entries")
+    .select(
+      "id, name, entry_type, status, parade_number, lineup_position, section, staging_spot, check_in_status"
+    )
+    .eq("event_id", eventId)
+    .order("lineup_position", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (
+    <AppShell>
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: "Organizations", href: "/organizations" },
+          {
+            label: organization?.name || "Organization",
+            href: `/organizations/${slug}`,
+          },
+          {
+            label: event?.name || "Parade",
+            href: `/organizations/${slug}/parades/${eventId}`,
+          },
+          { label: "Lineup" },
+        ]}
+      />
+
+      <div className="mb-10 flex items-start justify-between gap-8">
+        <div>
+          <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
+            Parade Lineup Builder
+          </p>
+          <h2 className="mt-4 text-5xl font-bold tracking-tight">Lineup</h2>
+          <p className="mt-4 max-w-2xl text-lg text-slate-300">
+            Build the official parade order, assign parade numbers, and prepare
+            entries for staging and parade-day operations.
+          </p>
+        </div>
+
+        <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
+          <Button>Manage Entries</Button>
+        </Link>
+      </div>
+
+      <Card title="Official Lineup">
+        {entries && entries.length > 0 ? (
+          <div className="mt-6 grid gap-3">
+            {entries.map((entry, index) => {
+              const paradeNumber = entry.parade_number || index + 1;
+
+              return (
+                <div
+                  key={entry.id}
+                  className="grid gap-4 rounded-xl border border-slate-800 bg-slate-950 p-4 md:grid-cols-[90px_1fr_180px]"
+                >
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                      Number
+                    </p>
+                    <p className="mt-2 text-3xl font-bold text-white">
+                      #{String(paradeNumber).padStart(3, "0")}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">
+                      {entry.name}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-400">
+                      {entry.entry_type} • {entry.status}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Section: {entry.section || "Unassigned"} • Spot:{" "}
+                      {entry.staging_spot || "Unassigned"}
+                    </p>
+                  </div>
+
+                  <div className="text-sm text-slate-400">
+                    <p>Status</p>
+                    <p className="mt-2 rounded-full border border-slate-700 px-3 py-1 text-center text-xs uppercase tracking-wide text-slate-300">
+                      {entry.check_in_status || "not_checked_in"}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="mt-6 text-slate-400">
+            No entries yet. Add entries before building the lineup.
+          </p>
+        )}
+      </Card>
+    </AppShell>
+  );
+}
