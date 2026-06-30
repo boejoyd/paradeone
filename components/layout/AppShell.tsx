@@ -1,4 +1,15 @@
 import { Sidebar } from "@/components/navigation/Sidebar";
+import Link from "next/link";
+
+<Link
+  href="/"
+  className="block transition-opacity hover:opacity-80"
+>
+  <div>
+    <h1>ParadeOne</h1>
+    <p>Mission Control</p>
+  </div>
+</Link>
 
 type AppShellProps = {
   children: React.ReactNode;
