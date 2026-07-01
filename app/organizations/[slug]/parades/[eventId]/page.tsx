@@ -60,7 +60,10 @@ export default async function ParadePage({ params }: ParadePageProps) {
         items={[
           { label: "Home", href: "/" },
           { label: "Organizations", href: "/organizations" },
-          { label: organization.name, href: `/organizations/${organization.slug}` },
+          {
+            label: organization.name,
+            href: `/organizations/${organization.slug}`,
+          },
           { label: event.name },
         ]}
       />
@@ -79,9 +82,17 @@ export default async function ParadePage({ params }: ParadePageProps) {
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <Link href={`/organizations/${slug}/parades/${eventId}/edit`}>
+              <Button variant="secondary">Edit Parade</Button>
+            </Link>
+
             <Link href={`/organizations/${slug}/parades/${eventId}/lineup`}>
               <Button>Open Lineup</Button>
+            </Link>
+
+            <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
+              <Button variant="secondary">Manage Entries</Button>
             </Link>
 
             <Link href={`/organizations/${slug}/parades/${eventId}/staging`}>
@@ -163,7 +174,9 @@ export default async function ParadePage({ params }: ParadePageProps) {
         </Card>
 
         <Card title="Participant Links">
-          <p>Share participant and GPS check-in links from each entry detail page.</p>
+          <p>
+            Share participant and GPS check-in links from each entry detail page.
+          </p>
           <div className="mt-5">
             <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
               <Button variant="secondary">Open Entry Links</Button>
