@@ -28,3 +28,18 @@ export async function updateStagingSpot(formData: FormData) {
 
   redirect(`/organizations/${slug}/parades/${eventId}/staging`);
 }
+export async function deleteStagingSpot(formData: FormData) {
+  const slug = String(formData.get("slug") || "");
+  const eventId = String(formData.get("eventId") || "");
+  const spotId = String(formData.get("spotId") || "");
+
+  const { error } = await supabase
+    .from("staging_spots")
+    .delete()
+    .eq("id", spotId)
+    .eq("event_id", eventId);
+
+  if (error) throw new Error(error.message);
+
+  redirect(`/organizations/${slug}/parades/${eventId}/staging`);
+}
