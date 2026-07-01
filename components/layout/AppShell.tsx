@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/navigation/Sidebar";
+import { MobileNav } from "@/components/navigation/MobileNav";
 import Link from "next/link";
 
 <Link
