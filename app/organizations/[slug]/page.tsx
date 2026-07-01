@@ -22,9 +22,7 @@ export default async function OrganizationPage({
     .eq("slug", slug)
     .single();
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   const { data: events } = await supabase
     .from("events")
@@ -53,9 +51,15 @@ export default async function OrganizationPage({
           <p className="mt-4 text-lg text-slate-300">/{organization.slug}</p>
         </div>
 
-        <Link href="/create-parade">
-          <Button>Create Parade</Button>
-        </Link>
+        <div className="flex gap-3">
+          <Link href={`/organizations/${organization.slug}/edit`}>
+            <Button variant="secondary">Edit Organization</Button>
+          </Link>
+
+          <Link href="/create-parade">
+            <Button>Create Parade</Button>
+          </Link>
+        </div>
       </div>
 
       <Card title="Parades">
