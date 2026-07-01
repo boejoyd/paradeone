@@ -1,16 +1,5 @@
-import { Sidebar } from "@/components/navigation/Sidebar";
 import { MobileNav } from "@/components/navigation/MobileNav";
-import Link from "next/link";
-
-<Link
-  href="/"
-  className="block transition-opacity hover:opacity-80"
->
-  <div>
-    <h1>ParadeOne</h1>
-    <p>Mission Control</p>
-  </div>
-</Link>
+import { Sidebar } from "@/components/navigation/Sidebar";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -19,9 +8,13 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
+      <MobileNav />
+
       <div className="mx-auto flex min-h-screen max-w-7xl">
         <Sidebar />
-        <section className="flex-1 px-8 py-8">{children}</section>
+        <section className="flex-1 px-5 py-6 md:px-8 md:py-8">
+          {children}
+        </section>
       </div>
     </main>
   );
