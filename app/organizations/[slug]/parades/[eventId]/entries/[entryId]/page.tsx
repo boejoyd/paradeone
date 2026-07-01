@@ -4,8 +4,7 @@ import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
-import { assignStagingSpot } from "./actions";
-
+import { assignStagingSpot, deleteEntry } from "./actions";
 
 type EntryDetailPageProps = {
   params: Promise<{
@@ -59,14 +58,20 @@ export default async function EntryDetailPage({ params }: EntryDetailPageProps) 
         ]}
       />
 
-      <div className="mb-10">
-        <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
-          Entry Detail
-        </p>
-        <h2 className="mt-4 text-5xl font-bold tracking-tight">{entry.name}</h2>
-        <p className="mt-4 text-lg text-slate-300">
-          {entry.entry_type} • {entry.status}
-        </p>
+      <div className="mb-10 flex items-start justify-between gap-8">
+        <div>
+          <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
+            Entry Detail
+          </p>
+          <h2 className="mt-4 text-5xl font-bold tracking-tight">{entry.name}</h2>
+          <p className="mt-4 text-lg text-slate-300">
+            {entry.entry_type} • {entry.status}
+          </p>
+        </div>
+
+        <Link href={`/organizations/${slug}/parades/${eventId}/entries/${entryId}/edit`}>
+          <Button>Edit Entry</Button>
+        </Link>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -81,11 +86,6 @@ export default async function EntryDetailPage({ params }: EntryDetailPageProps) 
           <p>Status: {entry.status}</p>
           <p>Estimated Length: {entry.estimated_length_feet || "Not set"} ft</p>
         </Card>
-
-
-<Link href={`/organizations/${slug}/parades/${eventId}/entries/${entryId}/edit`}>
-  <Button>Edit Entry</Button>
-</Link>
 
         <Card title="Staging Assignment">
           <form action={assignStagingSpot} className="mt-4 grid gap-4">
@@ -117,58 +117,48 @@ export default async function EntryDetailPage({ params }: EntryDetailPageProps) 
           </p>
         </Card>
 
-<Card title="Self Check-In">
-  <p>
-    Share this check-in page with the entry contact on parade day. GPS check-in
-    will only succeed near the assigned staging spot.
-  </p>
+        <Card title="Participant View">
+          <p>
+            Share this page with the entry contact so they can see their parade
+            number, staging spot, announcer script, and check-in link.
+          </p>
 
-  <div className="mt-5">
-    <Link href={`/check-in/${entry.id}`}>
-      <Button variant="secondary">Open Self Check-In Page</Button>
-    </Link>
-  </div>
-</Card>
-<Card title="Participant View">
-  <p>
-    Share this page with the entry contact so they can see their parade number,
-    staging spot, announcer script, and check-in link.
-  </p>
+          <div className="mt-5">
+            <Link href={`/participant/${entry.id}`}>
+              <Button variant="secondary">Open Participant View</Button>
+            </Link>
+          </div>
+        </Card>
 
-  <div className="mt-5">
-    <Link href={`/participant/${entry.id}`}>
-      <Button variant="secondary">Open Participant View</Button>
-    </Link>
-  </div>
-</Card>
+        <Card title="GPS Self Check-In">
+          <p>
+            Use this page on parade day. Check-in will only succeed when the
+            device is near the assigned staging spot.
+          </p>
 
-<Card title="Participant View">
-  <p>
-    Share this page with the entry contact so they can see their parade number,
-    staging spot, announcer script, and check-in link.
-  </p>
+          <div className="mt-5">
+            <Link href={`/check-in/${entry.id}`}>
+              <Button variant="secondary">Open Check-In Page</Button>
+            </Link>
+          </div>
+        </Card>
 
-  <div className="mt-5">
-    <Link href={`/participant/${entry.id}`}>
-      <Button variant="secondary">Open Participant View</Button>
-    </Link>
-  </div>
-</Card>
+        <Card title="Danger Zone">
+          <p>Delete this entry and remove it from the parade.</p>
 
-<Card title="GPS Self Check-In">
-  <p>
-    Use this page on parade day. Check-in will only succeed when the device is
-    near the assigned staging spot.
-  </p>
+          <form action={deleteEntry} className="mt-5">
+            <input type="hidden" name="slug" value={slug} />
+            <input type="hidden" name="eventId" value={eventId} />
+            <input type="hidden" name="entryId" value={entryId} />
 
-  <div className="mt-5">
-    <Link href={`/check-in/${entry.id}`}>
-      <Button variant="secondary">Open Check-In Page</Button>
-    </Link>
-  </div>
-</Card>
-
-
+            <button
+              type="submit"
+              className="rounded-xl border border-red-900 bg-red-950 px-5 py-3 text-sm font-semibold text-red-300 hover:bg-red-900"
+            >
+              Delete Entry
+            </button>
+          </form>
+        </Card>
       </div>
     </AppShell>
   );
