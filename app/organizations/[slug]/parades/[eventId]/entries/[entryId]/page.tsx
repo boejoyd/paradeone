@@ -82,6 +82,11 @@ export default async function EntryDetailPage({ params }: EntryDetailPageProps) 
           <p>Estimated Length: {entry.estimated_length_feet || "Not set"} ft</p>
         </Card>
 
+
+<Link href={`/organizations/${slug}/parades/${eventId}/entries/${entryId}/edit`}>
+  <Button>Edit Entry</Button>
+</Link>
+
         <Card title="Staging Assignment">
           <form action={assignStagingSpot} className="mt-4 grid gap-4">
             <input type="hidden" name="slug" value={slug} />
