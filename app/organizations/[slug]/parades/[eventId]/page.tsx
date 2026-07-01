@@ -65,6 +65,9 @@ export default async function ParadePage({ params }: ParadePageProps) {
         ]}
       />
 
+
+
+
       <div className="mb-10 flex items-start justify-between gap-8">
         <div>
           <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
@@ -78,16 +81,23 @@ export default async function ParadePage({ params }: ParadePageProps) {
           </p>
         </div>
 
-        <div className="flex gap-3">
-          <Link href={`/organizations/${slug}/parades/${eventId}/lineup`}>
-            <Button>Open Lineup</Button>
-          </Link>
+<div className="flex flex-wrap gap-3">
+  <Link href={`/organizations/${slug}/parades/${eventId}/edit`}>
+    <Button variant="secondary">Edit Parade</Button>
+  </Link>
 
-          <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
-            <Button variant="secondary">Manage Entries</Button>
-          </Link>
-        </div>
+  <Link href={`/organizations/${slug}/parades/${eventId}/lineup`}>
+    <Button>Open Lineup</Button>
+  </Link>
+
+  <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
+    <Button variant="secondary">Manage Entries</Button>
+  </Link>
+</div>
+
       </div>
+
+
 
       <div className="mb-8 grid gap-6 md:grid-cols-4">
         <StatCard label="Entries" value={entryCount || 0} />
