@@ -24,3 +24,13 @@ export async function updateParade(formData: FormData) {
 
   redirect(`/organizations/${slug}/parades/${eventId}`);
 }
+export async function deleteParade(formData: FormData) {
+  const slug = String(formData.get("slug") || "");
+  const eventId = String(formData.get("eventId") || "");
+
+  const { error } = await supabase.from("events").delete().eq("id", eventId);
+
+  if (error) throw new Error(error.message);
+
+  redirect(`/organizations/${slug}`);
+}
