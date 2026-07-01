@@ -4,6 +4,7 @@ import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
+import { deleteOrganization } from "./actions";
 
 export default async function OrganizationsPage() {
   const { data: organizations, error } = await supabase
@@ -17,7 +18,9 @@ export default async function OrganizationsPage() {
 
   return (
     <AppShell>
-      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Organizations" }]} />
+      <Breadcrumbs
+        items={[{ label: "Home", href: "/" }, { label: "Organizations" }]}
+      />
 
       <div className="mb-10 flex items-start justify-between gap-8">
         <div>
@@ -43,19 +46,38 @@ export default async function OrganizationsPage() {
         {organizations && organizations.length > 0 ? (
           <div className="mt-6 grid gap-4">
             {organizations.map((organization) => (
-              <Link
+              <div
                 key={organization.id}
-                href={`/organizations/${organization.slug}`}
-                className="block rounded-xl border border-slate-800 bg-slate-950 p-5 transition hover:border-blue-500 hover:bg-slate-900"
+                className="rounded-xl border border-slate-800 bg-slate-950 p-5"
               >
-                <h3 className="text-xl font-semibold text-white">
-                  {organization.name}
-                </h3>
+                <Link
+                  href={`/organizations/${organization.slug}`}
+                  className="block transition hover:text-blue-300"
+                >
+                  <h3 className="text-xl font-semibold text-white">
+                    {organization.name}
+                  </h3>
 
-                <p className="mt-2 text-sm text-slate-400">
-                  /{organization.slug}
-                </p>
-              </Link>
+                  <p className="mt-2 text-sm text-slate-400">
+                    /{organization.slug}
+                  </p>
+                </Link>
+
+                <form action={deleteOrganization} className="mt-4">
+                  <input
+                    type="hidden"
+                    name="organizationId"
+                    value={organization.id}
+                  />
+
+                  <button
+                    type="submit"
+                    className="text-sm font-medium text-red-400 hover:text-red-300"
+                  >
+                    Delete Organization
+                  </button>
+                </form>
+              </div>
             ))}
           </div>
         ) : (
