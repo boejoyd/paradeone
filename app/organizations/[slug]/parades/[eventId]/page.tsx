@@ -40,17 +40,17 @@ export default async function ParadePage({ params }: ParadePageProps) {
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId);
 
-  const { count: checkedInCount } = await supabase
-    .from("entries")
-    .select("*", { count: "exact", head: true })
-    .eq("event_id", eventId)
-    .eq("check_in_status", "checked_in");
-
   const { count: stagedCount } = await supabase
     .from("entries")
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId)
     .not("staging_spot_id", "is", null);
+
+  const { count: checkedInCount } = await supabase
+    .from("entries")
+    .select("*", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .eq("check_in_status", "checked_in");
 
   const missingCount = (entryCount || 0) - (checkedInCount || 0);
 
@@ -65,27 +65,29 @@ export default async function ParadePage({ params }: ParadePageProps) {
         ]}
       />
 
-      <div className="mb-10 flex items-start justify-between gap-8">
-        <div>
-          <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
-            Parade Mission Control
-          </p>
-          <h2 className="mt-4 text-5xl font-bold tracking-tight">
-            {event.name}
-          </h2>
-          <p className="mt-4 text-lg text-slate-300">
-            {event.city || "No city set"} • {event.event_date || "No date set"}
-          </p>
-        </div>
+      <div className="mb-10 rounded-3xl border border-slate-800 bg-slate-900 p-8">
+        <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
+          ParadeOne Mission Control
+        </p>
 
-        <div className="flex gap-3">
-          <Link href={`/organizations/${slug}/parades/${eventId}/lineup`}>
-            <Button>Open Lineup</Button>
-          </Link>
+        <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="text-5xl font-bold tracking-tight">{event.name}</h2>
+            <p className="mt-4 text-lg text-slate-300">
+              {event.city || "No city set"} • {event.event_date || "No date set"}{" "}
+              {event.start_time ? `• ${event.start_time}` : ""}
+            </p>
+          </div>
 
-          <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
-            <Button variant="secondary">Manage Entries</Button>
-          </Link>
+          <div className="flex gap-3">
+            <Link href={`/organizations/${slug}/parades/${eventId}/lineup`}>
+              <Button>Open Lineup</Button>
+            </Link>
+
+            <Link href={`/organizations/${slug}/parades/${eventId}/staging`}>
+              <Button variant="secondary">Open Live Map</Button>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -96,13 +98,45 @@ export default async function ParadePage({ params }: ParadePageProps) {
         <StatCard label="Missing" value={missingCount} />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card title="Entries">
+      <div className="mb-8 grid gap-6 lg:grid-cols-3">
+        <Card title="Current Operational Status">
           <p>
-            Manage participants, contact information, float types, announcer
-            scripts, participant links, and check-in pages.
+            Parade status: <span className="text-white">{event.status}</span>
           </p>
+          <p className="mt-2">
+            Expected entries:{" "}
+            <span className="text-white">{event.expected_entries || 0}</span>
+          </p>
+          <p className="mt-2">
+            Staging sections:{" "}
+            <span className="text-white">{event.staging_sections || 0}</span>
+          </p>
+        </Card>
 
+        <Card title="Immediate Attention">
+          <p>
+            {missingCount > 0
+              ? `${missingCount} entries have not checked in yet.`
+              : "No missing entries right now."}
+          </p>
+          <p className="mt-2">
+            {(entryCount || 0) - (stagedCount || 0)} entries still need staging
+            assignments.
+          </p>
+        </Card>
+
+        <Card title="Parade Day Mode">
+          <p>
+            Live check-ins, section releases, GPS movement, SMS alerts,
+            announcer view, and judging tools will flow through this command
+            center.
+          </p>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <Card title="Entries">
+          <p>Manage participants, contacts, scripts, and participant links.</p>
           <div className="mt-5">
             <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
               <Button variant="secondary">Open Entries</Button>
@@ -110,12 +144,8 @@ export default async function ParadePage({ params }: ParadePageProps) {
           </div>
         </Card>
 
-        <Card title="Lineup Builder">
-          <p>
-            Build the official parade order, assign parade numbers, and show
-            which entry each participant follows and leads.
-          </p>
-
+        <Card title="Lineup">
+          <p>Build the official parade order and front/behind relationships.</p>
           <div className="mt-5">
             <Link href={`/organizations/${slug}/parades/${eventId}/lineup`}>
               <Button variant="secondary">Open Lineup</Button>
@@ -123,12 +153,8 @@ export default async function ParadePage({ params }: ParadePageProps) {
           </div>
         </Card>
 
-        <Card title="Staging">
-          <p>
-            Create staging spots, assign GPS coordinates, define geofences, and
-            prepare parade-day self check-ins.
-          </p>
-
+        <Card title="Staging Map">
+          <p>Create staging spots, assign GPS coordinates, and view map pins.</p>
           <div className="mt-5">
             <Link href={`/organizations/${slug}/parades/${eventId}/staging`}>
               <Button variant="secondary">Open Staging</Button>
@@ -136,11 +162,13 @@ export default async function ParadePage({ params }: ParadePageProps) {
           </div>
         </Card>
 
-        <Card title="Parade Day Operations">
-          <p>
-            Live check-ins, section releases, GPS movement, SMS alerts, and
-            announcer/judge tools will flow through Mission Control.
-          </p>
+        <Card title="Participant Links">
+          <p>Share participant and GPS check-in links from each entry detail page.</p>
+          <div className="mt-5">
+            <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
+              <Button variant="secondary">Open Entry Links</Button>
+            </Link>
+          </div>
         </Card>
       </div>
     </AppShell>

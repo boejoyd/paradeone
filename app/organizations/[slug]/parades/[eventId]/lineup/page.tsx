@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
 import { autoNumberLineup } from "./actions";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 type LineupPageProps = {
   params: Promise<{
@@ -136,9 +137,8 @@ const { data: entries, error } = await supabase
 
                   <div className="text-sm text-slate-400">
                     <p>Status</p>
-                    <p className="mt-2 rounded-full border border-slate-700 px-3 py-1 text-center text-xs uppercase tracking-wide text-slate-300">
-                      {entry.check_in_status || "not_checked_in"}
-                    </p>
+
+		<StatusBadge status={entry.check_in_status} />
                   </div>
                 </div>
               );

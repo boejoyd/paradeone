@@ -1,3 +1,5 @@
+import { StatusBadge } from "@/components/ui/StatusBadge";
+
 type AssignedEntry = {
   id: string;
   name: string;
@@ -83,9 +85,11 @@ export function StagingMap({ spots }: StagingMapProps) {
 		  {assignedEntry?.name || "Empty Spot"}
 		</p>
 
-		<p className="mt-2 text-xs uppercase tracking-wide text-slate-500">
-		  {status}
-		</p>
+
+		<div className="mt-2">
+		  <StatusBadge status={status} />
+		</div>
+
                   <p className="mt-3 text-xs text-slate-500">
                     Radius: {spot.geofence_radius_feet} ft
                   </p>
