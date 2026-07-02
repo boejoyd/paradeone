@@ -2,9 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { LiveStagingMap } from "@/components/maps/LiveStagingMap";
-import { StagingMap } from "@/components/staging/StagingMap";
 import { supabase } from "@/lib/supabase";
 
 type StagingPageProps = {
@@ -58,7 +56,7 @@ export default async function StagingPage({ params }: StagingPageProps) {
         ]}
       />
 
-      <div className="mb-10 flex items-start justify-between gap-8">
+      <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
             Staging Builder
@@ -75,64 +73,64 @@ export default async function StagingPage({ params }: StagingPageProps) {
         </Link>
       </div>
 
-      <div className="mb-8">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="xl:sticky xl:top-6">
+          <LiveStagingMap
+            spots={spots || []}
+            editBasePath={`/organizations/${slug}/parades/${eventId}/staging`}
+          />
+        </div>
 
-<LiveStagingMap
-  spots={spots || []}
-  editBasePath={`/organizations/${slug}/parades/${eventId}/staging`}
-/>
-
-      </div>
-
-      <div className="mb-8">
-        <StagingMap spots={spots || []} />
-      </div>
-
-      <Card title="Staging Spots">
-        {spots && spots.length > 0 ? (
-          <div className="mt-6 grid gap-3">
-            {spots.map((spot) => (
-
-
-     
-<div
-  id={`spot-${spot.id}`}
-  key={spot.id}
-  className="rounded-xl border border-slate-800 bg-slate-950 p-4 transition-all duration-300"
->
-
-
-                <h3 className="text-lg font-semibold text-white">
-                  {spot.spot_code}
-                </h3>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  {spot.section || "No section"} •{" "}
-                  {spot.street_name || "No street"}
-                </p>
-
-                <p className="mt-2 text-sm text-slate-500">
-                  GPS: {spot.latitude ?? "unset"},{" "}
-                  {spot.longitude ?? "unset"} • Radius:{" "}
-                  {spot.geofence_radius_feet} ft
-                </p>
-
-                <div className="mt-4">
-                  <Link
-                    href={`/organizations/${slug}/parades/${eventId}/staging/${spot.id}/edit`}
-                  >
-                    <Button variant="secondary">Edit Spot</Button>
-                  </Link>
-                </div>
-              </div>
-            ))}
+        <aside className="max-h-[720px] overflow-y-auto rounded-3xl border border-slate-800 bg-slate-950 p-4">
+          <div className="mb-4">
+            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">
+              Staging Spots
+            </p>
+            <h3 className="mt-2 text-2xl font-bold text-white">
+              Spot Directory
+            </h3>
           </div>
-        ) : (
-          <p className="mt-6 text-slate-400">
-            No staging spots yet. Add your first spot.
-          </p>
-        )}
-      </Card>
+
+          {spots && spots.length > 0 ? (
+            <div className="grid gap-3">
+              {spots.map((spot) => (
+                <div
+                  id={`spot-${spot.id}`}
+                  key={spot.id}
+                  className="rounded-xl border border-slate-800 bg-slate-950 p-4 transition-all duration-300"
+                >
+                  <h3 className="text-lg font-semibold text-white">
+                    {spot.spot_code}
+                  </h3>
+
+                  <p className="mt-1 text-sm text-slate-400">
+                    {spot.section || "No section"} •{" "}
+                    {spot.street_name || "No street"}
+                  </p>
+
+                  <p className="mt-2 text-sm text-slate-500">
+                    GPS: {spot.latitude ?? "unset"},{" "}
+                    {spot.longitude ?? "unset"} • Radius:{" "}
+                    {spot.geofence_radius_feet} ft
+                  </p>
+
+                  <div className="mt-4">
+                    <Link
+                      href={`/organizations/${slug}/parades/${eventId}/staging/${spot.id}/edit`}
+                    >
+                      <Button variant="secondary">Edit Spot</Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-slate-400">
+              No staging spots yet. Add your first spot.
+            </p>
+          )}
+        </aside>
+      </div>
     </AppShell>
   );
 }
