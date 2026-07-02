@@ -33,7 +33,7 @@ export function OpenMissionControlButton({
 
   return (
     <Link href={href} onClick={setActiveParade}>
-      <Button>Open Mission Control</Button>
+      <Button>Open Parade</Button>
     </Link>
   );
 }
