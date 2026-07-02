@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
+import { OpenMissionControlButton } from "@/components/parades/OpenMissionControlButton";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
@@ -76,11 +77,13 @@ export default async function ParadesPage() {
                     </div>
 
                     {organization?.slug && (
-                      <Link
+                      <OpenMissionControlButton
                         href={`/organizations/${organization.slug}/parades/${event.id}`}
-                      >
-                        <Button>Open Mission Control</Button>
-                      </Link>
+                        organizationName={organization.name}
+                        organizationSlug={organization.slug}
+                        paradeId={event.id}
+                        paradeName={event.name}
+                      />
                     )}
                   </div>
                 </div>
