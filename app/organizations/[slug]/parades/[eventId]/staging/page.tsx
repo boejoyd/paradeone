@@ -92,10 +92,16 @@ export default async function StagingPage({ params }: StagingPageProps) {
         {spots && spots.length > 0 ? (
           <div className="mt-6 grid gap-3">
             {spots.map((spot) => (
-              <div
-                key={spot.id}
-                className="rounded-xl border border-slate-800 bg-slate-950 p-4"
-              >
+
+
+     
+<div
+  id={`spot-${spot.id}`}
+  key={spot.id}
+  className="rounded-xl border border-slate-800 bg-slate-950 p-4 transition-all duration-300"
+>
+
+
                 <h3 className="text-lg font-semibold text-white">
                   {spot.spot_code}
                 </h3>

@@ -139,9 +139,26 @@ export function LiveStagingMap({ spots, editBasePath }: LiveStagingMapProps) {
     };
   }, [spots, editBasePath]);
 
-  return (
-    <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950">
-      <div ref={mapContainer} className="h-[520px] w-full" />
-    </div>
-  );
+
+return (
+  <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950">
+    <style jsx global>{`
+      .mapboxgl-popup-content {
+        background: #020617 !important;
+        color: white !important;
+        border: 1px solid #1e293b !important;
+        border-radius: 16px !important;
+      }
+
+      .mapboxgl-popup-tip {
+        border-top-color: #020617 !important;
+        border-bottom-color: #020617 !important;
+      }
+    `}</style>
+
+    <div ref={mapContainer} className="h-[520px] w-full" />
+  </div>
+);
+
+
 }
