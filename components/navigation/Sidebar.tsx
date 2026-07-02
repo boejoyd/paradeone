@@ -15,7 +15,7 @@ type ActiveParade = {
 const navItems = [
   { label: "Organizations", href: "/organizations" },
   { label: "Parades", href: "/parades" },
-  { label: "Mission Control", href: "/" },
+  { label: "Dashboard", href: "/" },
   { label: "Settings", href: "/settings" },
 ];
 
