@@ -2,6 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { ACTIVE_PARADE_KEY } from "@/lib/activeParade";
+
+type ActiveParade = {
+  organizationName: string;
+  organizationSlug: string;
+  paradeId: string;
+  paradeName: string;
+};
 
 const navItems = [
   { label: "Organizations", href: "/organizations" },
@@ -12,6 +21,15 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [activeParade, setActiveParade] = useState<ActiveParade | null>(null);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(ACTIVE_PARADE_KEY);
+
+    if (stored) {
+      setActiveParade(JSON.parse(stored));
+    }
+  }, []);
 
   return (
     <aside className="hidden min-h-screen w-56 shrink-0 border-r border-slate-800 bg-slate-950 px-4 py-6 md:block">
@@ -23,6 +41,23 @@ export function Sidebar() {
           Operations
         </h1>
       </Link>
+
+      {activeParade && (
+        <Link
+          href={`/organizations/${activeParade.organizationSlug}/parades/${activeParade.paradeId}`}
+          className="mt-6 block rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:border-blue-500"
+        >
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+            Active Parade
+          </p>
+          <p className="mt-2 text-sm font-semibold text-white">
+            {activeParade.paradeName}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {activeParade.organizationName}
+          </p>
+        </Link>
+      )}
 
       <nav className="mt-10 space-y-2">
         {navItems.map((item) => {
