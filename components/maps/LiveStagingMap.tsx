@@ -27,6 +27,23 @@ function formatStatus(status: string | null | undefined) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function highlightSpotCard(spotId: string) {
+  const card = document.getElementById(`spot-${spotId}`);
+
+  if (!card) return;
+
+  card.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+  });
+
+  card.classList.add("ring-2", "ring-blue-500", "bg-slate-900");
+
+  window.setTimeout(() => {
+    card.classList.remove("ring-2", "ring-blue-500", "bg-slate-900");
+  }, 2500);
+}
+
 export function LiveStagingMap({ spots, editBasePath }: LiveStagingMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -57,18 +74,18 @@ export function LiveStagingMap({ spots, editBasePath }: LiveStagingMapProps) {
     mapRef.current = map;
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-if (validSpots.length > 1) {
-  const bounds = new mapboxgl.LngLatBounds();
+    if (validSpots.length > 1) {
+      const bounds = new mapboxgl.LngLatBounds();
 
-  validSpots.forEach((spot) => {
-    bounds.extend([spot.longitude!, spot.latitude!]);
-  });
+      validSpots.forEach((spot) => {
+        bounds.extend([spot.longitude!, spot.latitude!]);
+      });
 
-  map.fitBounds(bounds, {
-    padding: 80,
-    maxZoom: 17,
-  });
-}
+      map.fitBounds(bounds, {
+        padding: 80,
+        maxZoom: 17,
+      });
+    }
 
     validSpots.forEach((spot) => {
       const assignedEntry = Array.isArray(spot.entries)
@@ -80,13 +97,19 @@ if (validSpots.length > 1) {
       const markerEl = document.createElement("div");
       markerEl.className = [
         "flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-lg",
-        isCheckedIn ? "bg-green-600" : assignedEntry ? "bg-yellow-600" : "bg-slate-600",
+        isCheckedIn
+          ? "bg-green-600"
+          : assignedEntry
+            ? "bg-yellow-600"
+            : "bg-slate-600",
       ].join(" ");
       markerEl.textContent = spot.spot_code;
 
-      const editHref = editBasePath
-        ? `${editBasePath}/${spot.id}/edit`
-        : "#";
+      markerEl.addEventListener("click", () => {
+        highlightSpotCard(spot.id);
+      });
+
+      const editHref = editBasePath ? `${editBasePath}/${spot.id}/edit` : "#";
 
       new mapboxgl.Marker(markerEl)
         .setLngLat([spot.longitude!, spot.latitude!])
