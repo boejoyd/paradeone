@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { ActionBar } from "@/components/layout/ActionBar";
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
@@ -12,9 +15,7 @@ export default async function OrganizationsPage() {
     .select("id, name, slug, created_at")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   return (
     <AppShell>
@@ -22,25 +23,18 @@ export default async function OrganizationsPage() {
         items={[{ label: "Home", href: "/" }, { label: "Organizations" }]}
       />
 
-      <div className="mb-10 flex items-start justify-between gap-8">
-        <div>
-          <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
-            Workspaces
-          </p>
-
-          <h2 className="mt-4 text-5xl font-bold tracking-tight">
-            Organizations
-          </h2>
-
-          <p className="mt-4 max-w-2xl text-lg text-slate-300">
-            Manage the organizations that operate one or more parades.
-          </p>
-        </div>
-
-        <Link href="/create-parade">
-          <Button>Create Parade</Button>
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Workspaces"
+        title="Organizations"
+        description="Manage the organizations that operate one or more parades."
+        actions={
+          <ActionBar>
+            <Link href="/create-parade">
+              <Button>Create Parade</Button>
+            </Link>
+          </ActionBar>
+        }
+      />
 
       <Card title="Organizations">
         {organizations && organizations.length > 0 ? (
@@ -81,7 +75,12 @@ export default async function OrganizationsPage() {
             ))}
           </div>
         ) : (
-          <p className="mt-6 text-slate-400">No organizations exist yet.</p>
+          <EmptyState
+            title="No organizations yet"
+            description="Create your first organization to begin managing parades, entries, staging, and operations."
+            actionHref="/create-parade"
+            actionLabel="Create Parade"
+          />
         )}
       </Card>
     </AppShell>

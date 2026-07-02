@@ -3,6 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/lib/supabase";
 import { autoNumberLineup } from "./actions";
 
@@ -28,15 +29,14 @@ export default async function LineupPage({ params }: LineupPageProps) {
     .eq("id", eventId)
     .single();
 
-
-const { data: entries, error } = await supabase
-  .from("entries")
-  .select(
-    "id, name, entry_type, status, parade_number, lineup_position, section, staging_spot, check_in_status, staging_spots(spot_code, section, street_name)"
-  )
-  .eq("event_id", eventId)
-  .order("lineup_position", { ascending: true, nullsFirst: false })
-  .order("created_at", { ascending: true });
+  const { data: entries, error } = await supabase
+    .from("entries")
+    .select(
+      "id, name, entry_type, status, parade_number, lineup_position, section, staging_spot, check_in_status, staging_spots(spot_code, section, street_name)"
+    )
+    .eq("event_id", eventId)
+    .order("lineup_position", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
 
   if (error) throw new Error(error.message);
 
@@ -87,12 +87,12 @@ const { data: entries, error } = await supabase
         {entries && entries.length > 0 ? (
           <div className="mt-6 grid gap-3">
             {entries.map((entry, index) => {
-		const paradeNumber = entry.parade_number || index + 1;
-		const previousEntry = entries[index - 1];
-		const nextEntry = entries[index + 1];
-		const assignedSpot = Array.isArray(entry.staging_spots)
-		  ? entry.staging_spots[0]
-		  : entry.staging_spots;
+              const paradeNumber = entry.parade_number || index + 1;
+              const previousEntry = entries[index - 1];
+              const nextEntry = entries[index + 1];
+              const assignedSpot = Array.isArray(entry.staging_spots)
+                ? entry.staging_spots[0]
+                : entry.staging_spots;
 
               return (
                 <div
@@ -106,39 +106,53 @@ const { data: entries, error } = await supabase
                     <p className="mt-2 text-3xl font-bold text-white">
                       #{String(paradeNumber).padStart(3, "0")}
                     </p>
-		<p className="mt-2 text-sm text-slate-500">
-  		Follows:{" "}
-  		{previousEntry
-    		? `#${String(previousEntry.parade_number || index).padStart(3, "0")} ${previousEntry.name}`
-    		: "Start of parade"}
-		</p>
-
-		<p className="mt-1 text-sm text-slate-500">
-  		Ahead of:{" "}
-  		{nextEntry
-    		? `#${String(nextEntry.parade_number || index + 2).padStart(3, "0")} ${nextEntry.name}`
-    		: "End of parade"}
-		</p>
                   </div>
 
                   <div>
                     <h3 className="text-lg font-semibold text-white">
                       {entry.name}
                     </h3>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {entry.entry_type} • {entry.status}
+
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="text-sm text-slate-400">
+                        {entry.entry_type}
+                      </span>
+                      <StatusBadge status={entry.status} />
+                    </div>
+
+                    <p className="mt-3 text-sm text-slate-500">
+                      Section:{" "}
+                      {assignedSpot?.section || entry.section || "Unassigned"}{" "}
+                      • Spot:{" "}
+                      {assignedSpot?.spot_code ||
+                        entry.staging_spot ||
+                        "Unassigned"}
                     </p>
+
                     <p className="mt-2 text-sm text-slate-500">
-			Section: {assignedSpot?.section || entry.section || "Unassigned"} • Spot:{" "}
-{assignedSpot?.spot_code || entry.staging_spot || "Unassigned"}
+                      Follows:{" "}
+                      {previousEntry
+                        ? `#${String(
+                            previousEntry.parade_number || index
+                          ).padStart(3, "0")} ${previousEntry.name}`
+                        : "Start of parade"}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Ahead of:{" "}
+                      {nextEntry
+                        ? `#${String(
+                            nextEntry.parade_number || index + 2
+                          ).padStart(3, "0")} ${nextEntry.name}`
+                        : "End of parade"}
                     </p>
                   </div>
 
                   <div className="text-sm text-slate-400">
-                    <p>Status</p>
-                    <p className="mt-2 rounded-full border border-slate-700 px-3 py-1 text-center text-xs uppercase tracking-wide text-slate-300">
-                      {entry.check_in_status || "not_checked_in"}
-                    </p>
+                    <p className="mb-2">Check-In</p>
+                    <StatusBadge
+                      status={entry.check_in_status || "not_checked_in"}
+                    />
                   </div>
                 </div>
               );
