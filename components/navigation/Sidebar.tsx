@@ -21,7 +21,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden min-h-screen w-72 border-r border-slate-800 bg-slate-950 px-6 py-8 md:block">
+<aside className="hidden min-h-screen w-56 shrink-0 border-r border-slate-800 bg-slate-950 px-4 py-6 md:block">
       <Link href="/" className="block transition hover:opacity-80">
         <p className="text-sm font-black uppercase tracking-[0.4em] text-white">
           PARADEONE
