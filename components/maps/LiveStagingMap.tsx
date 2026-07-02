@@ -16,9 +16,18 @@ type MapSpot = {
 
 type LiveStagingMapProps = {
   spots: MapSpot[];
+  editBasePath?: string;
 };
 
-export function LiveStagingMap({ spots }: LiveStagingMapProps) {
+function formatStatus(status: string | null | undefined) {
+  if (!status) return "Not checked in";
+
+  return status
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function LiveStagingMap({ spots, editBasePath }: LiveStagingMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
@@ -46,7 +55,6 @@ export function LiveStagingMap({ spots }: LiveStagingMapProps) {
     });
 
     mapRef.current = map;
-
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
     validSpots.forEach((spot) => {
@@ -54,19 +62,36 @@ export function LiveStagingMap({ spots }: LiveStagingMapProps) {
         ? spot.entries[0]
         : null;
 
+      const isCheckedIn = assignedEntry?.check_in_status === "checked_in";
+
       const markerEl = document.createElement("div");
-      markerEl.className =
-        "flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-blue-500 text-xs font-bold text-white shadow-lg";
+      markerEl.className = [
+        "flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-lg",
+        isCheckedIn ? "bg-green-600" : assignedEntry ? "bg-yellow-600" : "bg-slate-600",
+      ].join(" ");
       markerEl.textContent = spot.spot_code;
+
+      const editHref = editBasePath
+        ? `${editBasePath}/${spot.id}/edit`
+        : "#";
 
       new mapboxgl.Marker(markerEl)
         .setLngLat([spot.longitude!, spot.latitude!])
         .setPopup(
           new mapboxgl.Popup({ offset: 25 }).setHTML(`
-            <strong>${spot.spot_code}</strong><br/>
-            ${spot.section || "No section"}<br/>
-            ${spot.street_name || "No street"}<br/>
-            ${assignedEntry?.name || "Empty Spot"}
+            <div style="min-width: 220px;">
+              <strong style="font-size: 16px;">${spot.spot_code}</strong>
+              <div style="margin-top: 8px;">${spot.section || "No section"}</div>
+              <div>${spot.street_name || "No street"}</div>
+              <hr style="margin: 10px 0;" />
+              <div><strong>Assigned:</strong> ${assignedEntry?.name || "Empty Spot"}</div>
+              <div><strong>Status:</strong> ${formatStatus(assignedEntry?.check_in_status)}</div>
+              ${
+                editBasePath
+                  ? `<a href="${editHref}" style="display:inline-block;margin-top:12px;color:#2563eb;font-weight:700;">Edit Spot</a>`
+                  : ""
+              }
+            </div>
           `)
         )
         .addTo(map);
@@ -76,7 +101,7 @@ export function LiveStagingMap({ spots }: LiveStagingMapProps) {
       map.remove();
       mapRef.current = null;
     };
-  }, [spots]);
+  }, [spots, editBasePath]);
 
   return (
     <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950">

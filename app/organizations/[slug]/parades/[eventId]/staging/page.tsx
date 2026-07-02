@@ -76,7 +76,12 @@ export default async function StagingPage({ params }: StagingPageProps) {
       </div>
 
       <div className="mb-8">
-        <LiveStagingMap spots={spots || []} />
+
+<LiveStagingMap
+  spots={spots || []}
+  editBasePath={`/organizations/${slug}/parades/${eventId}/staging`}
+/>
+
       </div>
 
       <div className="mb-8">
