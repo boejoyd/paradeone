@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { ActionBar } from "@/components/layout/ActionBar";
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/lib/supabase";
 
 type ParadePageProps = {
@@ -60,44 +63,38 @@ export default async function ParadePage({ params }: ParadePageProps) {
         items={[
           { label: "Home", href: "/" },
           { label: "Organizations", href: "/organizations" },
-          { label: organization.name, href: `/organizations/${organization.slug}` },
+          {
+            label: organization.name,
+            href: `/organizations/${organization.slug}`,
+          },
           { label: event.name },
         ]}
       />
 
+      <PageHeader
+        eyebrow="Parade Mission Control"
+        title={event.name}
+        description={`${event.city || "No city set"} • ${
+          event.event_date || "No date set"
+        }${event.start_time ? ` • ${event.start_time}` : ""}`}
+        actions={
+          <ActionBar>
+            <StatusBadge status={event.status} />
 
+            <Link href={`/organizations/${slug}/parades/${eventId}/edit`}>
+              <Button variant="secondary">Edit Parade</Button>
+            </Link>
 
+            <Link href={`/organizations/${slug}/parades/${eventId}/lineup`}>
+              <Button>Open Lineup</Button>
+            </Link>
 
-      <div className="mb-10 flex items-start justify-between gap-8">
-        <div>
-          <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
-            Parade Mission Control
-          </p>
-          <h2 className="mt-4 text-5xl font-bold tracking-tight">
-            {event.name}
-          </h2>
-          <p className="mt-4 text-lg text-slate-300">
-            {event.city || "No city set"} • {event.event_date || "No date set"}
-          </p>
-        </div>
-
-<div className="flex flex-wrap gap-3">
-  <Link href={`/organizations/${slug}/parades/${eventId}/edit`}>
-    <Button variant="secondary">Edit Parade</Button>
-  </Link>
-
-  <Link href={`/organizations/${slug}/parades/${eventId}/lineup`}>
-    <Button>Open Lineup</Button>
-  </Link>
-
-  <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
-    <Button variant="secondary">Manage Entries</Button>
-  </Link>
-</div>
-
-      </div>
-
-
+            <Link href={`/organizations/${slug}/parades/${eventId}/entries`}>
+              <Button variant="secondary">Manage Entries</Button>
+            </Link>
+          </ActionBar>
+        }
+      />
 
       <div className="mb-8 grid gap-6 md:grid-cols-4">
         <StatCard label="Entries" value={entryCount || 0} />
