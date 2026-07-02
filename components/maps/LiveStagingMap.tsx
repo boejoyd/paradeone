@@ -57,6 +57,19 @@ export function LiveStagingMap({ spots, editBasePath }: LiveStagingMapProps) {
     mapRef.current = map;
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
+if (validSpots.length > 1) {
+  const bounds = new mapboxgl.LngLatBounds();
+
+  validSpots.forEach((spot) => {
+    bounds.extend([spot.longitude!, spot.latitude!]);
+  });
+
+  map.fitBounds(bounds, {
+    padding: 80,
+    maxZoom: 17,
+  });
+}
+
     validSpots.forEach((spot) => {
       const assignedEntry = Array.isArray(spot.entries)
         ? spot.entries[0]
