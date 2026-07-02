@@ -10,7 +10,7 @@ export function AppShell({ children }: AppShellProps) {
     <main className="min-h-screen bg-slate-950 text-white">
       <MobileNav />
 
-      <div className="mx-auto flex min-h-screen max-w-7xl">
+<div className="flex min-h-screen w-full">
         <Sidebar />
         <section className="flex-1 px-5 py-6 md:px-8 md:py-8">
           {children}
