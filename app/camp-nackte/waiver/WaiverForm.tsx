@@ -3,10 +3,7 @@
 import { useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 
-const WAIVER_TEXT = `
-Nackte LLC Waiver
-
-Before your visit, please review and sign the waiver below. This helps us keep the check-in process quick and ensures everyone understands the campground policies.
+const WAIVER_TEXT = `Before your visit, please review and sign the waiver below. This helps us keep the check-in process quick and ensures everyone understands the campground policies.
 
 # Camp Nackte Waiver, Assumption of Risk, and Release of Liability
 
@@ -77,10 +74,27 @@ This document constitutes the entire agreement regarding assumption of risk and 
 By signing below, I certify that I have carefully read this agreement, understand its contents, understand that I am giving up certain legal rights, including the right to bring certain claims against Nackte LLC, and voluntarily agree to all of its terms.
 
 
-I understand this is a legally binding agreement and that I have had the opportunity to ask questions before signing.
+I understand this is a legally binding agreement and that I have had the opportunity to ask questions before signing.`;
 
+function WaiverTextBlock() {
+  return (
+    <article className="rounded-3xl bg-white p-6 text-slate-950 shadow-2xl md:p-10">
+      <div className="mx-auto max-w-3xl">
+        <h2 className="text-3xl font-bold tracking-tight">
+          Nackte LLC Waiver
+        </h2>
 
-`;
+        <p className="mt-3 border-b border-slate-200 pb-6 text-base text-slate-600">
+          Please read this waiver carefully before signing.
+        </p>
+
+        <div className="mt-8 whitespace-pre-wrap text-[17px] leading-9 text-slate-800">
+          {WAIVER_TEXT}
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export function CampNackteWaiverForm() {
   const signatureRef = useRef<SignatureCanvas | null>(null);
@@ -90,17 +104,11 @@ export function CampNackteWaiverForm() {
     signatureRef.current?.clear();
   }
 
- 
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-  event.preventDefault();
-
-  const form = event.currentTarget;
-  const formData = new FormData(form);
-
-
-
-
+    const form = event.currentTarget;
+    const formData = new FormData(form);
 
     const fullName = String(formData.get("fullName") || "").trim();
     const email = String(formData.get("email") || "").trim();
@@ -134,94 +142,109 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
       }),
     });
 
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      setMessage(errorBody?.error || "Something went wrong saving the waiver.");
+      return;
+    }
 
-
-	if (!response.ok) {
-  const errorBody = await response.json().catch(() => null);
-  setMessage(errorBody?.error || "Something went wrong saving the waiver.");
-  return;
-}
-
-
-
-setMessage("Waiver submitted successfully. Thank you.");
-form.reset();
-clearSignature();
-window.scrollTo({ top: 0, behavior: "smooth" });
-
+    setMessage("Waiver submitted successfully. Thank you.");
+    form.reset();
+    clearSignature();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
-      <section className="mx-auto max-w-4xl">
-        <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
-          Camp Nackte
-        </p>
+    <main className="min-h-screen bg-slate-950 px-5 py-8 text-white md:px-8 md:py-12">
+      <section className="mx-auto max-w-5xl">
+        <div className="mb-8 rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
+          <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
+            Camp Nackte
+          </p>
 
-        <h1 className="mt-4 text-4xl font-bold">Nackte LLC Waiver</h1>
+          <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
+            Welcome to Camp Nackte
+          </h1>
 
-        <p className="mt-4 text-slate-300">
-          Please read the waiver carefully, complete the required fields, and
-          sign below.
-        </p>
+          <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-300">
+            Before your visit, please review and sign the waiver below. This
+            helps us keep check-in quick and ensures everyone understands the
+            campground policies.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 grid gap-6">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-            <pre className="whitespace-pre-wrap text-sm leading-7 text-slate-300">
-              {WAIVER_TEXT}
-            </pre>
-          </div>
+        <form onSubmit={handleSubmit} className="grid gap-8">
+          <WaiverTextBlock />
 
-          <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-300">Full Name *</span>
-            <input
-              name="fullName"
-              required
-              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-            />
-          </label>
+          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
+            <h2 className="text-2xl font-bold">Guest Information</h2>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <label className="grid gap-2">
-              <span className="text-sm font-medium text-slate-300">Email</span>
-              <input
-                name="email"
-                type="email"
-                className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-              />
-            </label>
+            <div className="mt-6 grid gap-6">
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-slate-300">
+                  Full Name *
+                </span>
+                <input
+                  name="fullName"
+                  required
+                  className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+                />
+              </label>
 
-            <label className="grid gap-2">
-              <span className="text-sm font-medium text-slate-300">Phone</span>
-              <input
-                name="phone"
-                className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-              />
-            </label>
-          </div>
+              <div className="grid gap-5 md:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className="text-sm font-medium text-slate-300">
+                    Email
+                  </span>
+                  <input
+                    name="email"
+                    type="email"
+                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+                  />
+                </label>
 
-          <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-300">
-              Date Visiting Camp *
-            </span>
-            <input
-              name="visitDate"
-              type="date"
-              required
-              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-            />
-          </label>
+                <label className="grid gap-2">
+                  <span className="text-sm font-medium text-slate-300">
+                    Phone
+                  </span>
+                  <input
+                    name="phone"
+                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+                  />
+                </label>
+              </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-            <p className="mb-3 text-sm font-medium text-slate-300">
-              Signature *
+              <p className="text-sm text-slate-400">
+                Please provide at least one: email or phone.
+              </p>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-slate-300">
+                  Date Visiting Camp *
+                </span>
+                <input
+                  name="visitDate"
+                  type="date"
+                  required
+                  className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+                />
+              </label>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
+            <h2 className="text-2xl font-bold">Signature</h2>
+
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              By signing below, I confirm that I have read, understand, and
+              agree to the Nackte LLC waiver.
             </p>
 
-            <div className="overflow-hidden rounded-xl bg-white">
+            <div className="mt-5 overflow-hidden rounded-xl bg-white">
               <SignatureCanvas
                 ref={signatureRef}
                 canvasProps={{
-                  className: "h-48 w-full",
+                  className: "h-52 w-full",
                 }}
               />
             </div>
@@ -233,26 +256,29 @@ window.scrollTo({ top: 0, behavior: "smooth" });
             >
               Clear signature
             </button>
-          </div>
 
-          <label className="flex gap-3 text-sm text-slate-300">
-            <input type="checkbox" required className="mt-1" />
-            <span>
-              I have read, understand, and agree to the Nackte LLC waiver.
-            </span>
-          </label>
+            <label className="mt-6 flex gap-3 text-sm text-slate-300">
+              <input type="checkbox" required className="mt-1" />
+              <span>
+                I have read, understand, and agree to the Nackte LLC waiver.
+              </span>
+            </label>
+          </section>
 
           <button
             type="submit"
-            className="rounded-xl bg-blue-600 px-6 py-4 font-semibold text-white hover:bg-blue-500"
+            className="rounded-xl bg-blue-600 px-6 py-4 text-lg font-semibold text-white hover:bg-blue-500"
           >
             Submit Waiver
           </button>
 
-          {message && <p className="text-sm text-slate-300">{message}</p>}
+          {message && (
+            <p className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
+              {message}
+            </p>
+          )}
         </form>
       </section>
     </main>
   );
 }
-
