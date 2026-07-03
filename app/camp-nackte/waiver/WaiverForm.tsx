@@ -6,54 +6,128 @@ import SignatureCanvas from "react-signature-canvas";
 const WAIVER_TEXT = `
 Nackte LLC Waiver
 
-The undersigned hereby waive, release and forever discharge Nackte LLC, its affiliates, managers, members, owners, agents, attorneys, employees, staff, volunteers, heirs, executors, administrators, representatives, predecessors, successors, and any person who personally owns property where Nackte LLC is operating from any claims resulting from physical or personal injury, pain, suffering, illness, disfigurement, temporary or permanent disability, loss or death, and any property damage that may occur or be caused by fire, theft, vandalism, water or land-related accidents, falls, snakes, insects, animals, uneven terrain, ditches, construction, tree stumps, natural events, pool mishaps, or any other occurrences or mishaps.
+# Camp Nackte Waiver, Assumption of Risk, and Release of Liability
 
-I understand that I have been given permission to enter the premises and use the premises for “camping”, “hiking”, “game participation”, swimming in the pool, using the pool, using the hot tub, using the jacuzzi, using the hot tub, fire pit, “recreational activities”, and all other related activities, or spectating. I recognize and understand that many of said activities can be dangerous in nature and can cause significant injury to person or property. I further recognize and understand that, due to the terrain, falls, snake or spider encounters, tree stumps, ditches, uneven terrain, or insect encounters, contact with nature may occur and may result in serious injury. As the undersigned I am here of my own free will, and entirely at my own risk. I understand that injuries or outcomes may arise by my own or others’ negligence or conditions on the premises or the conditions or use of amenities offered at the premises or related to travel to and from the premises.
+## Assumption of Risk
 
-I understand there is no supervision for the pool, showers, hot tub, jacuzzi, and any buildings that are on the grounds where Nackte LLC is operating. I understand that adults may be in a state of undress in Camp Nackte and I, the undersigned, come to this camp with the knowledge that adult activities may happen, and I do not find these activities obscene. Nonetheless, I, the undersigned, assume all related risks, both known and unknown. Neither Nackte LLC nor the owner/s of the property where Nackte LLC is operating are responsible for errors, omissions, acts or failures to act by any party or entity conducting a specific event or activity.
+I voluntarily choose to enter Camp Nackte and participate in camping, hiking, swimming, use of the pool, hot tub, jacuzzi, fire pit, recreational activities, social activities, spectating, and all other activities available on the property.
 
-I agree to use the pool and jacuzzi in the prescribed manor. I agree to enter and exit the pool and Jacuzzi in the correct manner, using the steps, and if possible using the handrail. I agree to release Nackte LLC from any and all liability if I am injured in any way, shape, or form in the pool or Jacuzzi.
+I understand that these activities involve inherent risks that cannot be completely eliminated and may result in serious personal injury, illness, permanent disability, death, emotional distress, or damage to personal property.
 
-I agree to use the fire pit in the prescribed manner, I agree that Nackte LLC is doing everything reasonable to protect me from injury when enjoying the fire pit. I agree to release Nackte LLC from any and all injuries I may acquire using the fire pit.
+These risks include, but are not limited to:
+
+* Falls
+* Uneven terrain
+* Tree roots, stumps, rocks, ditches, and natural obstacles
+* Wildlife, snakes, spiders, insects, and other animals
+* Fire and burns
+* Water-related accidents
+* Weather conditions
+* Construction areas
+* Theft or vandalism
+* Equipment failure
+* The acts or negligence of myself or other guests
+* Any other known or unknown hazards associated with outdoor recreation.
+
+I knowingly and voluntarily assume all risks, whether known or unknown.
+
+---
+
+## Release of Liability
+
+In consideration for being permitted to enter Camp Nackte, I release and forever discharge Nackte LLC, its members, managers, owners, employees, volunteers, agents, affiliates, successors, assigns, representatives, and the owners of any property where Camp Nackte operates from any claims, demands, causes of action, damages, losses, or liabilities arising out of or related to my presence on the property or participation in any activity, including claims arising from the ordinary negligence of Nackte LLC or its representatives, to the fullest extent permitted by Texas law.
+
+This release includes claims involving bodily injury, illness, disability, death, emotional distress, and loss or damage to personal property.
+
+This release does not waive liability for conduct that cannot legally be waived under applicable law.
+
+---
+
+## Indemnification
+
+I agree to indemnify and hold harmless Nackte LLC and the property owners from claims, damages, liabilities, or expenses arising from my own actions, negligence, or violation of campground rules, including reasonable attorney's fees where permitted by law.
+
+---
+
+## Camp Facilities
+
+I understand that the pool, hot tub, jacuzzi, showers, fire pit, and other recreational amenities are unsupervised.
+
+I agree to use all facilities safely, follow posted rules, use designated entrances and exits, and exercise reasonable care while using any campground amenity.
+
+I assume all risks associated with using these facilities.
+
+---
+
+## Nature of the Campground
+
+I understand that Camp Nackte is an LGBTQIA+ safe space dedicated to providing a respectful, welcoming environment for all guests regardless of race, religion, language, country of origin, sex, sexual orientation, or gender identity.
+
+I understand that Camp Nackte is clothing optional only in designated areas and that adults may be nude. I acknowledge this before entering the property and understand that lawful adult nudity may be visible during my visit.
+
+---
+
+## Photography Policy
+
+Photography and video recording are permitted only in designated areas and only with the verbal consent of every identifiable person appearing in the image, including anyone in the background.
+
+If Camp Nackte determines that any photograph violates this policy, I agree to permanently delete all copies of that photograph.
+
+I understand that despite these policies, I may inadvertently appear in the background of another guest's approved photograph. I release Camp Nackte from liability arising solely from such incidental appearances.
+
+If I voluntarily participate in an official Camp Nackte promotional photo or video session, I grant Camp Nackte permission to use my likeness in photographs, videos, and other media for lawful promotional purposes without compensation. I waive any right to inspect or approve the finished materials and understand that no royalties or additional compensation will be paid.
+
+---
+
+## Camp Rules
+
+I agree that:
+
+* No person under eighteen (18) years of age may enter the property.
+* I will not possess or use illegal drugs on the property.
+* Pets must remain leashed and under my control at all times.
+* I will follow all posted campground rules and staff instructions.
+* Camp Nackte is clothing optional only in designated areas.
+* Weather conditions do not qualify for refunds.
+
+---
+
+## Vendors and Independent Contractors
+
+I understand that vendors, entertainers, instructors, contractors, and other independent businesses may occasionally operate on the property.
+
+I acknowledge that these parties are responsible for their own services, and I release Camp Nackte from liability arising solely from the acts or omissions of independent third parties that are not under Camp Nackte's control.
+
+---
+
+## Health
+
+I certify that I am not knowingly experiencing symptoms of a contagious illness that would place other guests at unreasonable risk.
+
+If I become ill during my visit, I agree to leave the campground promptly and notify management if appropriate.
+
+---
+
+## Membership
+
+If I purchase a membership, this agreement shall remain effective for one (1) year from the date it is signed unless replaced by a newer agreement.
+
+---
+
+## General Provisions
+
+This agreement shall be governed by the laws of the State of Texas.
+
+If any provision of this agreement is found unenforceable, the remaining provisions shall remain in full force and effect.
+
+This document constitutes the entire agreement regarding assumption of risk and release of liability between the parties.
+
+By signing below, I certify that I have carefully read this agreement, understand its contents, understand that I am giving up certain legal rights, including the right to bring certain claims against Nackte LLC, and voluntarily agree to all of its terms.
 
 
-If a membership is purchased, I agree that this waiver is effective for no less than 1 year from the date and time that I sign below.
+I understand this is a legally binding agreement and that I have had the opportunity to ask questions before signing.
 
-I fully understand that this is a release of liability and I agree to voluntarily give up or waive any right that I otherwise have to bring legal action against Nackte LLC or the owners of the property where Nackte LLC is operating, for any personal injury or property damage whatsoever, including negligence on the part of Nackte LLC, its agents, and employees, and/or property owners. This waiver and release of liability shall remain in effect for the duration of my presence at the premises and in perpetuity after i leave the property. I further agree to indemnify, defend, pay all legal fees, and financially reimburse Nackte LLC and/or the owners of the property where Nackte LLC is operating, for any damages that might be awarded to myself or my legal representation as a result of anything that could possibly happen while i'm in a location where Nackte LLC is operating. I will hold harmless Nackte LLC and the property owner/s where Camp Nackte is operating, against any and all claims, suits or actions of any kind whatsoever for liability, damages, compensation or otherwise brought by me or anyone on my behalf, including attorney’s fees and any related costs.
 
-I expressly agree this release is intended to be as broad and inclusive as permitted by the laws of the State of Texas and that, if any portion of this agreement is held to be invalid, it is agreed that the balance shall, notwithstanding, continue in full force and effect. This release contains the entire agreement between the parties and this agreement, and the terms of this release are contractual and not mere recitals. This release will be construed in accordance with the laws of the State of Texas.
-
-I will not take pictures unless every person in the picture has verbally agreed to be in the frame, regardless of whether it's the foreground or background. The pool area is the only area of Camp Nackte where phones/cameras are allowed. I fully understand that I may inadvertently be in the background of someone's photo. I will not hold Nackte LLC or the owners of the property where Nackte LLC is operating responsible in any way for any damages that may occur as the result of me being in the background of someone's picture.
-
-No one under 18 years of age may enter the grounds where Nackte LLC is operating. NO EXCEPTIONS!
-
-I understand and agree that Nackte LLC owns any and all photos taken on property.  I agree that i will forever delete and make unrecoverable any photos not approved by Nackte LLC.  I also agree to delete and make unrecoverable any photo not approved by every person that may be in the forground or background of a photo.
-
-I understand that Camp Nackte is not responsible for the weather. There will be no weather related refunds.
-
-I agree to release Nackte LLC and the owner of any property where Nackte LLC is operating from any and all liability related to any and all consequences of using contractors, self employed professionals, or other businesses who may be operating at the locations where Nackte LLC is also operating.     
-
-I understand that Nackte is a LGBTQIA+ safe space and agree to be respectful and accepting regardless of sex, sexual orientation, gender identity, race, religion, language, or country of origin.
-
-I agree to never bring any illegal substances into the campground.
-
-I agree that if I have a pet, the pet will be on a leash at all times and under my control.
-
-Camp Nackte is clothing optional IN DESIGNATED AREAS ONLY.
-
-I am not feeling sick in any way shape or form. If I am experiencing any of the following symptoms I will stay home. If I begin feeling any of the following symptoms while visiting Camp Nackte, I will leave, get tested for Covid, and notify campground personnel of any positive results. Please see list below for common symptoms of Covid 19.
-
-Fever
-Cough
-Chills
-Headache
-Shortness of breath
-Fatigue
-Body Aches
-Sore Throat
-New Loss of Taste or Smell
-
-I hereby grant Nackte LLC permission to use my likeness in a photograph, video, or other digital media ("photo") in any and all of it's publications, including web-based publications, without payment or other consideration. I understand and agree that any and all photos will become the property of Nackte LLC and will not be returned. I hereby irrevocably authorize Nackte LLC to edit, alter, copy, exhibit, public, or distribute these photos for any lawful purpose. In addition, I waive any right to inspect or approve the finished product wherein my likeness appears. Additionally, I waive any right to royalties or other compensation arising or related to the use of the photo. I hereby hold harmless, release, and forever discharge Nackte LLC from all claims, demands, and causes of action which I, my heirs, representatives, executors, administrators, or any other persons acting on my behalf or on behalf of my estate have or may by reason of this authorization.  This clause is required only if you are part of a promotional photoshoot at Camp Nackte.  
 `;
 
 export function CampNackteWaiverForm() {
