@@ -41,6 +41,7 @@ I assume all risks associated with using these facilities.
 ## Nature of the Campground
 I understand that Camp Nackte is an LGBTQIA+ safe space dedicated to providing a respectful, welcoming environment for all guests regardless of race, religion, language, country of origin, sex, sexual orientation, or gender identity.
 I understand that Camp Nackte is clothing optional only in designated areas and that adults may be nude. I acknowledge this before entering the property and understand that lawful adult nudity may be visible during my visit.
+
 ## Photography Policy
 Photography and video recording are permitted only in designated areas and only with the verbal consent of every identifiable person appearing in the image, including anyone in the background.
 If Camp Nackte determines that any photograph violates this policy, I agree to permanently delete all copies of that photograph.
@@ -72,7 +73,6 @@ This agreement shall be governed by the laws of the State of Texas.
 If any provision of this agreement is found unenforceable, the remaining provisions shall remain in full force and effect.
 This document constitutes the entire agreement regarding assumption of risk and release of liability between the parties.
 By signing below, I certify that I have carefully read this agreement, understand its contents, understand that I am giving up certain legal rights, including the right to bring certain claims against Nackte LLC, and voluntarily agree to all of its terms.
-
 
 I understand this is a legally binding agreement and that I have had the opportunity to ask questions before signing.`;
 
