@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { CampNackteWaiverSubmissionsClient } from "@/components/waiver/CampNackteWaiverSubmissionsClient";
 
 type WaiverSubmission = {
   id: string;
@@ -6,13 +7,18 @@ type WaiverSubmission = {
   email: string | null;
   phone: string | null;
   visit_date: string | null;
+  waiver_text: string | null;
+  signature_data_url: string | null;
+  pdf_url: string | null;
   created_at: string | null;
 };
 
 export default async function CampNackteWaiverSubmissionsPage() {
   const { data, error } = await supabase
     .from("camp_nackte_waivers")
-    .select("id, full_name, email, phone, visit_date, created_at")
+    .select(
+      "id, full_name, email, phone, visit_date, waiver_text, signature_data_url, pdf_url, created_at"
+    )
     .order("created_at", { ascending: false });
 
   const submissions = (data ?? []) as WaiverSubmission[];
@@ -42,43 +48,7 @@ export default async function CampNackteWaiverSubmissionsPage() {
             No waiver submissions have been recorded yet.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
-            <table className="min-w-full divide-y divide-slate-800 text-left text-sm">
-              <thead className="bg-slate-950/60 text-slate-300">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Signer</th>
-                  <th className="px-4 py-3 font-medium">Submitted</th>
-                  <th className="px-4 py-3 font-medium">Email</th>
-                  <th className="px-4 py-3 font-medium">Phone</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
-                {submissions.map((submission) => (
-                  <tr key={submission.id} className="align-top">
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-white">
-                        {submission.full_name || "Unnamed guest"}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-400">
-                        {submission.visit_date || "No visit date"}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {submission.created_at
-                        ? new Date(submission.created_at).toLocaleString()
-                        : "Unknown time"}
-                    </td>
-                    <td className="px-4 py-3">
-                      {submission.email || "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      {submission.phone || "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <CampNackteWaiverSubmissionsClient submissions={submissions} />
         )}
       </section>
     </main>
