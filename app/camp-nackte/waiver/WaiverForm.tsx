@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 
@@ -97,6 +98,7 @@ function WaiverTextBlock() {
 }
 
 export function CampNackteWaiverForm() {
+  const router = useRouter();
   const signatureRef = useRef<SignatureCanvas | null>(null);
   const [message, setMessage] = useState("");
 
@@ -148,10 +150,7 @@ export function CampNackteWaiverForm() {
       return;
     }
 
-    setMessage("Waiver submitted successfully. Thank you.");
-    form.reset();
-    clearSignature();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    router.push("/camp-nackte/waiver/thank-you");
   }
 
   return (
