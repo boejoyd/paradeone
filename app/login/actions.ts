@@ -9,31 +9,47 @@ function getSiteUrl() {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
+function getRedirectTarget(value: FormDataEntryValue | null) {
+  const redirectValue = String(value ?? "").trim();
+
+  if (redirectValue.startsWith("/")) {
+    return redirectValue;
+  }
+
+  return "/dashboard";
+}
+
+function getLoginRedirect(redirectTo: string) {
+  return `/login?redirect=${encodeURIComponent(redirectTo)}`;
+}
+
 export async function signIn(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const redirectTo = getRedirectTarget(formData.get("redirect"));
 
   if (!email || !password) {
-    redirect("/login");
+    redirect(getLoginRedirect(redirectTo));
   }
 
   const supabase = await createServerSupabaseClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect("/login");
+    redirect(getLoginRedirect(redirectTo));
   }
 
   revalidatePath("/");
-  redirect("/");
+  redirect(redirectTo);
 }
 
 export async function signUp(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const redirectTo = getRedirectTarget(formData.get("redirect"));
 
   if (!email || !password) {
-    redirect("/login");
+    redirect(getLoginRedirect(redirectTo));
   }
 
   const supabase = await createServerSupabaseClient();
@@ -41,20 +57,20 @@ export async function signUp(formData: FormData) {
     email,
     password,
     options: {
-      emailRedirectTo: `${getSiteUrl()}/auth/callback`,
+      emailRedirectTo: `${getSiteUrl()}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
     },
   });
 
   if (error) {
-    redirect("/login");
+    redirect(getLoginRedirect(redirectTo));
   }
 
   if (data.session) {
     revalidatePath("/");
-    redirect("/");
+    redirect(redirectTo);
   }
 
-  redirect("/login");
+  redirect(getLoginRedirect(redirectTo));
 }
 
 export async function signOut() {

@@ -1,7 +1,33 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+function isPublicPath(pathname: string) {
+  if (pathname.startsWith("/_next") || pathname === "/favicon.ico") {
+    return true;
+  }
+
+  if (pathname === "/" || pathname === "/login") {
+    return true;
+  }
+
+  if (pathname.startsWith("/auth")) {
+    return true;
+  }
+
+  if (pathname.startsWith("/camp-nackte/waiver")) {
+    return true;
+  }
+
+  return /\.[^/]+$/.test(pathname);
+}
+
 export async function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+
+  if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -26,7 +52,16 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", `${pathname}${search}`);
+    return NextResponse.redirect(loginUrl);
+  }
 
   return response;
 }
