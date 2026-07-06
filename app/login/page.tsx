@@ -6,11 +6,27 @@ import { Card } from "@/components/ui/Card";
 
 import { signIn, signUp } from "./actions";
 
-export default async function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{
+    redirect?: string | string[];
+  }>;
+};
+
+function getRedirectTarget(value: string | string[] | undefined) {
+  if (typeof value === "string" && value.startsWith("/")) {
+    return value;
+  }
+
+  return "/dashboard";
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const redirectTo = getRedirectTarget(resolvedSearchParams?.redirect);
   const user = await getCurrentUser();
 
   if (user) {
-    redirect("/");
+    redirect(redirectTo);
   }
 
   return (
@@ -29,6 +45,7 @@ export default async function LoginPage() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card title="Sign in">
             <form action={signIn} className="mt-4 space-y-4">
+              <input type="hidden" name="redirect" value={redirectTo} />
               <label className="block text-sm text-slate-300">
                 <span className="mb-2 block">Email</span>
                 <input
@@ -53,6 +70,7 @@ export default async function LoginPage() {
 
           <Card title="Create account">
             <form action={signUp} className="mt-4 space-y-4">
+              <input type="hidden" name="redirect" value={redirectTo} />
               <label className="block text-sm text-slate-300">
                 <span className="mb-2 block">Email</span>
                 <input
