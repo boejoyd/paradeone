@@ -66,7 +66,10 @@ export async function POST(request: Request) {
     });
 
   if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+    return NextResponse.json(
+      { error: `Storage upload failed: ${uploadError.message}` },
+      { status: 500 }
+    );
   }
 
   const { data: publicUrlData } = supabase.storage
@@ -86,7 +89,10 @@ export async function POST(request: Request) {
     });
 
   if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
+    return NextResponse.json(
+      { error: `Database insert failed: ${insertError.message}` },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ success: true });

@@ -145,8 +145,22 @@ export function CampNackteWaiverForm() {
     });
 
     if (!response.ok) {
-      const errorBody = await response.json().catch(() => null);
-      setMessage(errorBody?.error || "Something went wrong saving the waiver.");
+      let errorMessage = "Something went wrong saving the waiver.";
+
+      try {
+        const errorBody = await response.json();
+        errorMessage =
+          typeof errorBody?.error === "string"
+            ? errorBody.error
+            : typeof errorBody?.message === "string"
+              ? errorBody.message
+              : errorMessage;
+      } catch {
+        errorMessage = "Something went wrong saving the waiver.";
+      }
+
+      console.error("Waiver submission failed", errorMessage);
+      setMessage(errorMessage);
       return;
     }
 

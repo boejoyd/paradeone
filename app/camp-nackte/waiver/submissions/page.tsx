@@ -42,34 +42,43 @@ export default async function CampNackteWaiverSubmissionsPage() {
             No waiver submissions have been recorded yet.
           </div>
         ) : (
-          <ul className="space-y-4">
-            {submissions.map((submission) => (
-              <li
-                key={submission.id}
-                className="rounded-2xl border border-slate-800 bg-slate-900 p-5"
-              >
-                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-lg font-semibold text-white">
-                      {submission.full_name || "Unnamed guest"}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      {submission.visit_date || "No visit date"}
-                    </p>
-                  </div>
-                  <p className="text-sm text-slate-400">
-                    {submission.created_at
-                      ? new Date(submission.created_at).toLocaleString()
-                      : "Unknown time"}
-                  </p>
-                </div>
-                <div className="mt-3 space-y-1 text-sm text-slate-300">
-                  {submission.email ? <p>Email: {submission.email}</p> : null}
-                  {submission.phone ? <p>Phone: {submission.phone}</p> : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+            <table className="min-w-full divide-y divide-slate-800 text-left text-sm">
+              <thead className="bg-slate-950/60 text-slate-300">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Signer</th>
+                  <th className="px-4 py-3 font-medium">Submitted</th>
+                  <th className="px-4 py-3 font-medium">Email</th>
+                  <th className="px-4 py-3 font-medium">Phone</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800 text-slate-300">
+                {submissions.map((submission) => (
+                  <tr key={submission.id} className="align-top">
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-white">
+                        {submission.full_name || "Unnamed guest"}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-400">
+                        {submission.visit_date || "No visit date"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {submission.created_at
+                        ? new Date(submission.created_at).toLocaleString()
+                        : "Unknown time"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {submission.email || "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {submission.phone || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>
