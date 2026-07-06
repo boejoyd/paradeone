@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const next =
     requestUrl.searchParams.get("redirect") ??
     requestUrl.searchParams.get("next") ??
-    "/dashboard";
+    "/";
 
   if (!code) {
     return NextResponse.redirect(new URL("/login", requestUrl.origin));

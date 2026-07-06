@@ -16,11 +16,21 @@ function getRedirectTarget(value: FormDataEntryValue | null) {
     return redirectValue;
   }
 
-  return "/dashboard";
+  return "/";
 }
 
-function getLoginRedirect(redirectTo: string) {
-  return `/login?redirect=${encodeURIComponent(redirectTo)}`;
+function getLoginRedirect(redirectTo: string, message?: string) {
+  const params = new URLSearchParams({ redirect: redirectTo });
+
+  if (message) {
+    params.set("message", message);
+  }
+
+  return `/login?${params.toString()}`;
+}
+
+function getErrorMessage(error: { message?: string } | null | undefined) {
+  return error?.message?.trim() || "Authentication failed.";
 }
 
 export async function signIn(formData: FormData) {
@@ -29,14 +39,14 @@ export async function signIn(formData: FormData) {
   const redirectTo = getRedirectTarget(formData.get("redirect"));
 
   if (!email || !password) {
-    redirect(getLoginRedirect(redirectTo));
+    redirect(getLoginRedirect(redirectTo, "Please enter both your email and password."));
   }
 
   const supabase = await createServerSupabaseClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect(getLoginRedirect(redirectTo));
+    redirect(getLoginRedirect(redirectTo, getErrorMessage(error)));
   }
 
   revalidatePath("/");
@@ -49,7 +59,7 @@ export async function signUp(formData: FormData) {
   const redirectTo = getRedirectTarget(formData.get("redirect"));
 
   if (!email || !password) {
-    redirect(getLoginRedirect(redirectTo));
+    redirect(getLoginRedirect(redirectTo, "Please enter both your email and password."));
   }
 
   const supabase = await createServerSupabaseClient();
@@ -62,7 +72,7 @@ export async function signUp(formData: FormData) {
   });
 
   if (error) {
-    redirect(getLoginRedirect(redirectTo));
+    redirect(getLoginRedirect(redirectTo, getErrorMessage(error)));
   }
 
   if (data.session) {
@@ -70,7 +80,7 @@ export async function signUp(formData: FormData) {
     redirect(redirectTo);
   }
 
-  redirect(getLoginRedirect(redirectTo));
+  redirect(getLoginRedirect(redirectTo, "Please check your inbox to confirm your account before signing in."));
 }
 
 export async function signOut() {

@@ -9,6 +9,7 @@ import { signIn, signUp } from "./actions";
 type LoginPageProps = {
   searchParams?: Promise<{
     redirect?: string | string[];
+    message?: string | string[];
   }>;
 };
 
@@ -17,12 +18,21 @@ function getRedirectTarget(value: string | string[] | undefined) {
     return value;
   }
 
-  return "/dashboard";
+  return "/";
+}
+
+function getMessage(value: string | string[] | undefined) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return undefined;
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const resolvedSearchParams = await searchParams;
   const redirectTo = getRedirectTarget(resolvedSearchParams?.redirect);
+  const message = getMessage(resolvedSearchParams?.message);
   const user = await getCurrentUser();
 
   if (user) {
@@ -41,6 +51,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Sign in to manage your parade operations or create a new account.
           </p>
         </div>
+
+        {message ? (
+          <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
+            {message}
+          </div>
+        ) : null}
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card title="Sign in">
