@@ -53,12 +53,40 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </p>
           </div>
 
-          <a
-            href="#create-account"
-            className="shrink-0 rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-blue-400 hover:text-white"
-          >
-            Create account
-          </a>
+          <details className="group relative shrink-0">
+            <summary className="list-none rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-blue-400 hover:text-white [&::-webkit-details-marker]:hidden">
+              Create Account
+            </summary>
+
+            <div className="absolute right-0 top-full z-10 mt-4 w-[min(28rem,calc(100vw-3rem))]">
+              <Card title="Create account">
+                <form action={signUp} className="mt-4 space-y-4">
+                  <input type="hidden" name="redirect" value={redirectTo} />
+                  <label className="block text-sm text-slate-300">
+                    <span className="mb-2 block">Email</span>
+                    <input
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-blue-400"
+                      name="email"
+                      type="email"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm text-slate-300">
+                    <span className="mb-2 block">Password</span>
+                    <input
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-blue-400"
+                      name="password"
+                      type="password"
+                      required
+                    />
+                  </label>
+                  <Button type="submit" variant="secondary">
+                    Create account
+                  </Button>
+                </form>
+              </Card>
+            </div>
+          </details>
         </div>
 
         {message ? (
@@ -98,35 +126,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 </div>
               </form>
             </Card>
-
-            <div id="create-account" className="mt-6">
-              <Card title="Create account">
-                <form action={signUp} className="mt-4 space-y-4">
-                  <input type="hidden" name="redirect" value={redirectTo} />
-                  <label className="block text-sm text-slate-300">
-                    <span className="mb-2 block">Email</span>
-                    <input
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-blue-400"
-                      name="email"
-                      type="email"
-                      required
-                    />
-                  </label>
-                  <label className="block text-sm text-slate-300">
-                    <span className="mb-2 block">Password</span>
-                    <input
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-blue-400"
-                      name="password"
-                      type="password"
-                      required
-                    />
-                  </label>
-                  <Button type="submit" variant="secondary">
-                    Create account
-                  </Button>
-                </form>
-              </Card>
-            </div>
           </div>
         </div>
       </div>
