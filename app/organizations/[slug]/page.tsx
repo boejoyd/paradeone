@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
+import { requireOrganizationAccess } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { archiveOrganization } from "./edit/actions";
 
 type OrganizationPageProps = {
   params: Promise<{
@@ -15,14 +18,19 @@ export default async function OrganizationPage({
   params,
 }: OrganizationPageProps) {
   const { slug } = await params;
+  const supabase = await createServerSupabaseClient();
 
   const { data: organization, error } = await supabase
     .from("organizations")
-    .select("id, name, slug, created_at")
+    .select("id, name, slug, description, created_at, archived_at")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
+  if (!organization) notFound();
+
+  const access = await requireOrganizationAccess(organization.id);
+  const isOwner = access.role === "owner";
 
   const { data: events } = await supabase
     .from("events")
@@ -49,12 +57,33 @@ export default async function OrganizationPage({
             {organization.name}
           </h2>
           <p className="mt-4 text-lg text-slate-300">/{organization.slug}</p>
+          {organization.description ? (
+            <p className="mt-4 max-w-2xl text-slate-300">
+              {organization.description}
+            </p>
+          ) : null}
+          {organization.archived_at ? (
+            <p className="mt-4 text-sm font-medium text-amber-400">
+              This organization is archived.
+            </p>
+          ) : null}
         </div>
 
-        <div className="flex gap-3">
-          <Link href={`/organizations/${organization.slug}/edit`}>
-            <Button variant="secondary">Edit Organization</Button>
-          </Link>
+        <div className="flex flex-wrap gap-3">
+          {isOwner ? (
+            <Link href={`/organizations/${organization.slug}/edit`}>
+              <Button variant="secondary">Edit Organization</Button>
+            </Link>
+          ) : null}
+
+          {isOwner && !organization.archived_at ? (
+            <form action={archiveOrganization}>
+              <input type="hidden" name="organizationId" value={organization.id} />
+              <Button type="submit" variant="secondary">
+                Archive Organization
+              </Button>
+            </form>
+          ) : null}
 
           <Link href="/create-parade">
             <Button>Create Parade</Button>
@@ -75,8 +104,7 @@ export default async function OrganizationPage({
                   {event.name}
                 </h3>
                 <p className="mt-1 text-sm text-slate-400">
-                  {event.city || "No city set"} •{" "}
-                  {event.event_date || "No date set"}
+                  {event.city || "No city set"} • {event.event_date || "No date set"}
                 </p>
                 <p className="mt-2 text-xs uppercase tracking-wide text-slate-500">
                   {event.status}

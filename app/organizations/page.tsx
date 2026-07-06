@@ -6,14 +6,33 @@ import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
-import { deleteOrganization } from "./actions";
+import { requireUser } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export default async function OrganizationsPage() {
-  const { data: organizations, error } = await supabase
-    .from("organizations")
-    .select("id, name, slug, created_at")
-    .order("created_at", { ascending: false });
+  const user = await requireUser();
+  const supabase = await createServerSupabaseClient();
+
+  const { data: memberships, error: membershipsError } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id);
+
+  if (membershipsError) throw new Error(membershipsError.message);
+
+  const organizationIds = (memberships ?? [])
+    .map((item) => item.organization_id)
+    .filter((id): id is string => typeof id === "string");
+
+  const { data: organizations, error } =
+    organizationIds.length > 0
+      ? await supabase
+          .from("organizations")
+          .select("id, name, slug, description, created_at, archived_at")
+          .in("id", organizationIds)
+          .is("archived_at", null)
+          .order("created_at", { ascending: false })
+      : { data: [], error: null };
 
   if (error) throw new Error(error.message);
 
@@ -29,8 +48,8 @@ export default async function OrganizationsPage() {
         description="Manage the organizations that operate one or more parades."
         actions={
           <ActionBar>
-            <Link href="/create-parade">
-              <Button>Create Parade</Button>
+            <Link href="/organizations/new">
+              <Button>Create Organization</Button>
             </Link>
           </ActionBar>
         }
@@ -55,22 +74,13 @@ export default async function OrganizationsPage() {
                   <p className="mt-2 text-sm text-slate-400">
                     /{organization.slug}
                   </p>
+
+                  {organization.description ? (
+                    <p className="mt-3 text-sm text-slate-400">
+                      {organization.description}
+                    </p>
+                  ) : null}
                 </Link>
-
-                <form action={deleteOrganization} className="mt-4">
-                  <input
-                    type="hidden"
-                    name="organizationId"
-                    value={organization.id}
-                  />
-
-                  <button
-                    type="submit"
-                    className="text-sm font-medium text-red-400 hover:text-red-300"
-                  >
-                    Delete Organization
-                  </button>
-                </form>
               </div>
             ))}
           </div>
@@ -78,8 +88,8 @@ export default async function OrganizationsPage() {
           <EmptyState
             title="No organizations yet"
             description="Create your first organization to begin managing parades, entries, staging, and operations."
-            actionHref="/create-parade"
-            actionLabel="Create Parade"
+            actionHref="/organizations/new"
+            actionLabel="Create Organization"
           />
         )}
       </Card>

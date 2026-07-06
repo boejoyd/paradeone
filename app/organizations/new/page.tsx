@@ -1,59 +1,31 @@
-import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { requireOrganizationRole } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { archiveOrganization, updateOrganization } from "./actions";
+import { createOrganization } from "../actions";
 
-type EditOrganizationPageProps = {
-  params: Promise<{
-    slug: string;
-  }>;
-};
-
-export default async function EditOrganizationPage({
-  params,
-}: EditOrganizationPageProps) {
-  const { slug } = await params;
-  const supabase = await createServerSupabaseClient();
-
-  const { data: organization, error } = await supabase
-    .from("organizations")
-    .select("id, name, slug, description, archived_at")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  if (!organization) notFound();
-
-  await requireOrganizationRole(organization.id, ["owner"]);
-
+export default function NewOrganizationPage() {
   return (
     <AppShell>
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },
           { label: "Organizations", href: "/organizations" },
-          { label: organization.name, href: `/organizations/${organization.slug}` },
-          { label: "Edit" },
+          { label: "New" },
         ]}
       />
 
       <div className="mb-10">
         <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
-          Organization Settings
+          Create Organization
         </p>
         <h2 className="mt-4 text-5xl font-bold tracking-tight">
-          Edit Organization
+          New Organization
         </h2>
       </div>
 
       <Card title="Organization Details">
-        <form action={updateOrganization} className="mt-6 grid gap-5">
-          <input type="hidden" name="organizationId" value={organization.id} />
-
+        <form action={createOrganization} className="mt-6 grid gap-5">
           <label className="grid gap-2">
             <span className="text-sm font-medium text-slate-300">
               Organization Name
@@ -61,8 +33,8 @@ export default async function EditOrganizationPage({
             <input
               name="name"
               required
-              defaultValue={organization.name}
               className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+              placeholder="Example: Pride San Antonio"
             />
           </label>
 
@@ -70,9 +42,8 @@ export default async function EditOrganizationPage({
             <span className="text-sm font-medium text-slate-300">Slug</span>
             <input
               name="slug"
-              required
-              defaultValue={organization.slug}
               className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+              placeholder="pride-san-antonio"
             />
           </label>
 
@@ -83,24 +54,15 @@ export default async function EditOrganizationPage({
             <textarea
               name="description"
               rows={4}
-              defaultValue={organization.description ?? ""}
               className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+              placeholder="What does this organization do?"
             />
           </label>
 
           <div className="pt-4">
-            <Button>Save Changes</Button>
+            <Button>Create Organization</Button>
           </div>
         </form>
-
-        {!organization.archived_at ? (
-          <form action={archiveOrganization} className="mt-4">
-            <input type="hidden" name="organizationId" value={organization.id} />
-            <Button type="submit" variant="secondary">
-              Archive Organization
-            </Button>
-          </form>
-        ) : null}
       </Card>
     </AppShell>
   );
