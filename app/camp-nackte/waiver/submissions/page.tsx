@@ -35,7 +35,8 @@ export default async function CampNackteWaiverSubmissionsPage() {
           </h1>
           <p className="mt-3 text-slate-300">
             A simple list of waiver submissions from the same table used by the
-            submission route.
+            submission route. Use the date filters below to focus on a specific
+            day or range.
           </p>
         </div>
 

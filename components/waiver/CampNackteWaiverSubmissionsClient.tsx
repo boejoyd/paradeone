@@ -18,18 +18,56 @@ type CampNackteWaiverSubmissionsClientProps = {
   submissions: WaiverSubmission[];
 };
 
+function getDateOnlyValue(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function isWithinDateRange(
+  createdAt: string | null,
+  startDate: string,
+  endDate: string
+) {
+  if (!startDate && !endDate) {
+    return true;
+  }
+
+  if (!createdAt) {
+    return false;
+  }
+
+  const submissionDate = new Date(createdAt);
+
+  if (Number.isNaN(submissionDate.getTime())) {
+    return false;
+  }
+
+  const submissionDateValue = getDateOnlyValue(submissionDate);
+
+  if (startDate && submissionDateValue < startDate) {
+    return false;
+  }
+
+  if (endDate && submissionDateValue > endDate) {
+    return false;
+  }
+
+  return true;
+}
+
 export function CampNackteWaiverSubmissionsClient({
   submissions,
 }: CampNackteWaiverSubmissionsClientProps) {
   const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filteredSubmissions = useMemo(() => {
     const normalizedQuery = search.trim().toLowerCase();
-
-    if (!normalizedQuery) {
-      return submissions;
-    }
 
     return submissions.filter((submission) => {
       const searchableText = [
@@ -41,37 +79,69 @@ export function CampNackteWaiverSubmissionsClient({
         .join(" ")
         .toLowerCase();
 
-      return searchableText.includes(normalizedQuery);
+      const matchesSearch =
+        normalizedQuery.length === 0 || searchableText.includes(normalizedQuery);
+      const matchesDateRange = isWithinDateRange(
+        submission.created_at,
+        startDate,
+        endDate
+      );
+
+      return matchesSearch && matchesDateRange;
     });
-  }, [search, submissions]);
+  }, [endDate, search, startDate, submissions]);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-300">
-            Total submissions: {submissions.length}
-          </p>
-          <p className="text-sm text-slate-400">
-            Showing {filteredSubmissions.length} matching record
-            {filteredSubmissions.length === 1 ? "" : "s"}.
-          </p>
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-300">
+              Total submissions: {submissions.length}
+            </p>
+            <p className="text-sm text-slate-400">
+              Showing {filteredSubmissions.length} matching record
+              {filteredSubmissions.length === 1 ? "" : "s"}.
+            </p>
+          </div>
+
+          <label className="w-full md:max-w-sm">
+            <span className="sr-only">Search submissions</span>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by name, email, or phone"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none ring-0 placeholder:text-slate-500"
+            />
+          </label>
         </div>
 
-        <label className="w-full md:max-w-sm">
-          <span className="sr-only">Search submissions</span>
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by name, email, or phone"
-            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none ring-0 placeholder:text-slate-500"
-          />
-        </label>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <label className="grid gap-2 text-sm text-slate-300">
+            <span>Start date</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none"
+            />
+          </label>
+
+          <label className="grid gap-2 text-sm text-slate-300">
+            <span>End date</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none"
+            />
+          </label>
+        </div>
       </div>
 
       {filteredSubmissions.length === 0 ? (
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-slate-300">
-          No waiver submissions match your search.
+          No waiver submissions match your search and date filters.
         </div>
       ) : (
         <div className="space-y-3">
