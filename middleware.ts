@@ -6,7 +6,7 @@ function isPublicPath(pathname: string) {
     return true;
   }
 
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname === "/signup") {
     return true;
   }
 
