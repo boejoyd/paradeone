@@ -28,12 +28,15 @@ export async function sendMissionControlMessageAction(formData: FormData) {
     eventId,
     senderUserId: user.id,
     senderType: "coc",
+    channel: "broadcast",
     senderName: String(formData.get("senderName") || "").trim(),
     senderRole: "COC",
     unitName: String(formData.get("unitName") || "").trim() || null,
     entryNumber: parseOptionalNumber(formData.get("entryNumber")),
     messageBody: String(formData.get("messageBody") || "").trim(),
     messageType: "chat",
+    source: "app",
+    direction: "outbound",
   });
 
   redirect(`/organizations/${slug}/parades/${eventId}#communications`);

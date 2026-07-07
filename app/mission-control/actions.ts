@@ -15,19 +15,38 @@ function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function parseSenderType(value: FormDataEntryValue | null): "coc" | "float" | "volunteer" | "system" {
+function parseSenderType(
+  value: FormDataEntryValue | null
+): "coc" | "parade_unit" | "volunteer" | "section_captain" {
   const senderType = String(value || "").trim();
 
   if (
     senderType === "coc" ||
-    senderType === "float" ||
+    senderType === "parade_unit" ||
     senderType === "volunteer" ||
-    senderType === "system"
+    senderType === "section_captain"
   ) {
     return senderType;
   }
 
   return "coc";
+}
+
+function parseChannel(
+  value: FormDataEntryValue | null
+): "broadcast" | "parade_units" | "volunteers" | "section_captains" {
+  const channel = String(value || "").trim();
+
+  if (
+    channel === "broadcast" ||
+    channel === "parade_units" ||
+    channel === "volunteers" ||
+    channel === "section_captains"
+  ) {
+    return channel;
+  }
+
+  return "broadcast";
 }
 
 function parseMessageType(value: FormDataEntryValue | null): "chat" | "status" | "assistance" | "system" {
@@ -57,6 +76,7 @@ export async function sendMissionControlChatMessageAction(formData: FormData) {
   const user = await requireUser();
 
   const senderType = parseSenderType(formData.get("senderType"));
+  const channel = parseChannel(formData.get("channel"));
   const messageType = parseMessageType(formData.get("messageType"));
 
   await sendMissionControlMessage({
@@ -64,12 +84,15 @@ export async function sendMissionControlChatMessageAction(formData: FormData) {
     eventId: eventId || null,
     senderUserId: user.id,
     senderType,
+    channel,
     senderName: String(formData.get("senderName") || "").trim(),
-    senderRole: senderType === "system" ? "SYSTEM" : "COC",
+    senderRole: "COC",
     unitName: String(formData.get("unitName") || "").trim() || null,
     entryNumber: parseOptionalNumber(formData.get("entryNumber")),
     messageBody: String(formData.get("messageBody") || "").trim(),
     messageType,
+    source: "app",
+    direction: "outbound",
   });
 
   redirect("/#chat");

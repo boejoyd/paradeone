@@ -28,13 +28,15 @@ type ChatMessage = {
   entryNumber: number | null;
   time: string;
   body: string;
-  senderType: "coc" | "float" | "volunteer" | "system";
+  senderType: "coc" | "parade_unit" | "volunteer" | "section_captain";
+  channel: CommunicationsChannel;
 };
 
 type MissionControlDbMessage = {
   id: string;
   senderName: string;
-  senderType: "coc" | "float" | "volunteer" | "system";
+  senderType: "coc" | "parade_unit" | "volunteer" | "section_captain";
+  channel: CommunicationsChannel;
   unitName: string | null;
   entryNumber: number | null;
   messageBody: string;
@@ -145,7 +147,8 @@ const chatMessages: ChatMessage[] = [
     entryNumber: 22,
     time: "10:42 AM",
     body: "I'm at my location but ran out of gas.",
-    senderType: "float",
+    senderType: "parade_unit",
+    channel: "parade_units",
   },
   {
     id: "chat-2",
@@ -155,6 +158,7 @@ const chatMessages: ChatMessage[] = [
     time: "10:43 AM",
     body: "Copy @Nackte. Tow vehicle is on the way.",
     senderType: "coc",
+    channel: "broadcast",
   },
   {
     id: "chat-3",
@@ -164,6 +168,7 @@ const chatMessages: ChatMessage[] = [
     time: "10:44 AM",
     body: "Ready to push.",
     senderType: "volunteer",
+    channel: "volunteers",
   },
 ];
 
@@ -322,6 +327,7 @@ function MissionControlChatPanelWithData({
         id: message.id,
         senderName: message.senderName,
         senderType: message.senderType,
+        channel: message.channel,
         unitName: message.unitName,
         entryNumber: message.entryNumber,
         body: message.messageBody,
@@ -334,6 +340,7 @@ function MissionControlChatPanelWithData({
         id: message.id,
         senderName: message.senderName,
         senderType: message.senderType,
+        channel: message.channel,
         unitName: message.unitName,
         entryNumber: message.entryNumber,
         body: message.body,
@@ -342,28 +349,11 @@ function MissionControlChatPanelWithData({
 
   const filteredMessages = normalizedMessages.filter((message) => {
     if (selectedChannel === "broadcast") {
-      return true;
+      return message.channel === "broadcast";
     }
 
-    if (selectedChannel === "parade_units") {
-      return message.senderType === "float";
-    }
-
-    if (selectedChannel === "volunteers") {
-      return message.senderType === "volunteer";
-    }
-
-    return message.senderType === "coc";
+    return message.channel === selectedChannel;
   });
-
-  const channelSenderType =
-    selectedChannel === "parade_units"
-      ? "float"
-      : selectedChannel === "volunteers"
-        ? "volunteer"
-        : selectedChannel === "broadcast"
-          ? "system"
-          : "coc";
 
   const channelMessageType = selectedChannel === "broadcast" ? "system" : "chat";
   const channelSenderName = "COC";
@@ -443,7 +433,8 @@ function MissionControlChatPanelWithData({
           <form action={communications.sendMessageAction} className="rounded-md border border-slate-800/70 bg-slate-950 p-1.5">
             <input type="hidden" name="organizationId" value={communications.organizationId} />
             <input type="hidden" name="eventId" value={communications.eventId ?? ""} />
-            <input type="hidden" name="senderType" value={channelSenderType} />
+            <input type="hidden" name="channel" value={selectedChannel} />
+            <input type="hidden" name="senderType" value="coc" />
             <input type="hidden" name="messageType" value={channelMessageType} />
             <input type="hidden" name="senderName" value={channelSenderName} />
 

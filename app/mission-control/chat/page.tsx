@@ -6,6 +6,26 @@ import { sendMissionControlChatMessageAction } from "@/app/mission-control/actio
 import { getMissionControlMapData } from "@/lib/data/missionControl";
 import { listMissionControlMessages } from "@/lib/mission-control/communications";
 
+function toUiSenderType(senderType: string): "coc" | "parade_unit" | "volunteer" | "section_captain" {
+  if (senderType === "parade_unit" || senderType === "volunteer" || senderType === "section_captain" || senderType === "coc") {
+    return senderType;
+  }
+
+  if (senderType === "float") {
+    return "parade_unit";
+  }
+
+  return "coc";
+}
+
+function toUiChannel(channel: string | null | undefined): "broadcast" | "parade_units" | "volunteers" | "section_captains" {
+  if (channel === "broadcast" || channel === "parade_units" || channel === "volunteers" || channel === "section_captains") {
+    return channel;
+  }
+
+  return "broadcast";
+}
+
 export default async function MissionControlChatPage() {
   const mapData = await getMissionControlMapData();
   const messages =
@@ -37,7 +57,8 @@ export default async function MissionControlChatPage() {
             messages: messages.map((message) => ({
               id: message.id,
               senderName: message.sender_name || "COC",
-              senderType: message.sender_type,
+              senderType: toUiSenderType(message.sender_type),
+              channel: toUiChannel(message.channel),
               unitName: message.unit_name,
               entryNumber: message.entry_number,
               messageBody: message.message_body,
