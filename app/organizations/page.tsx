@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
-import { deleteOrganization } from "./actions";
 
 export default async function OrganizationsPage() {
   const { data: organizations, error } = await supabase
@@ -56,21 +55,6 @@ export default async function OrganizationsPage() {
                     /{organization.slug}
                   </p>
                 </Link>
-
-                <form action={deleteOrganization} className="mt-4">
-                  <input
-                    type="hidden"
-                    name="organizationId"
-                    value={organization.id}
-                  />
-
-                  <button
-                    type="submit"
-                    className="text-sm font-medium text-red-400 hover:text-red-300"
-                  >
-                    Delete Organization
-                  </button>
-                </form>
               </div>
             ))}
           </div>

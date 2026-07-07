@@ -2,20 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { signOut } from "@/app/login/actions";
-import { ACTIVE_PARADE_KEY } from "@/lib/activeParade";
-
-type ActiveParade = {
-  organizationName: string;
-  organizationSlug: string;
-  paradeId: string;
-  paradeName: string;
-};
 
 const navItems = [
   { label: "Organizations", href: "/organizations" },
-  { label: "Parades", href: "/parades" },
   { label: "Mission Control", href: "/" },
   { label: "Settings", href: "/settings" },
 ];
@@ -26,16 +17,7 @@ type SidebarProps = {
 
 export function Sidebar({ userEmail }: SidebarProps) {
   const pathname = usePathname();
-  const [activeParade, setActiveParade] = useState<ActiveParade | null>(null);
   const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(ACTIVE_PARADE_KEY);
-
-    if (stored) {
-      setActiveParade(JSON.parse(stored));
-    }
-  }, []);
 
   return (
     <aside
@@ -65,23 +47,6 @@ export function Sidebar({ userEmail }: SidebarProps) {
           {collapsed ? ">" : "<"}
         </button>
       </div>
-
-      {activeParade && !collapsed && (
-        <Link
-          href={`/organizations/${activeParade.organizationSlug}/parades/${activeParade.paradeId}`}
-          className="mt-6 block rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:border-blue-500"
-        >
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-            Active Parade
-          </p>
-          <p className="mt-2 text-sm font-semibold text-white">
-            {activeParade.paradeName}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            {activeParade.organizationName}
-          </p>
-        </Link>
-      )}
 
       <nav className="mt-8 space-y-2">
         {navItems.map((item) => {

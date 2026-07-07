@@ -42,6 +42,14 @@ export default async function EditOrganizationPage({
         <h2 className="mt-4 text-5xl font-bold tracking-tight">
           Edit Organization
         </h2>
+        <div className="mt-4">
+          <a
+            href={`/organizations/${organization.slug}/settings`}
+            className="text-sm font-medium text-blue-300 hover:text-blue-200"
+          >
+            Open Organization Settings & Danger Zone
+          </a>
+        </div>
       </div>
 
       <Card title="Organization Details">

@@ -56,6 +56,10 @@ export default async function OrganizationPage({
             <Button variant="secondary">Edit Organization</Button>
           </Link>
 
+          <Link href={`/organizations/${organization.slug}/settings`}>
+            <Button variant="secondary">Settings</Button>
+          </Link>
+
           <Link href="/create-parade">
             <Button>Create Parade</Button>
           </Link>
