@@ -2,7 +2,7 @@ create table mission_control_messages (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references organizations(id) on delete cascade,
   event_id uuid references events(id) on delete cascade,
-  parade_unit_id uuid references parade_units(id) on delete set null,
+  parade_unit_id uuid references entries(id) on delete set null,
   sender_user_id uuid,
   sender_type text not null default 'coc' check (
     sender_type in ('coc', 'float', 'volunteer', 'system')
