@@ -14,27 +14,25 @@ export function PageHeader({
   actions,
 }: PageHeaderProps) {
   return (
-    <div className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
       <div>
         {eyebrow && (
-          <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-slate-400">
             {eyebrow}
           </p>
         )}
 
-        <h2 className="mt-4 text-5xl font-bold tracking-tight">
-          {title}
-        </h2>
+        <h2 className="mt-0.5 text-base font-semibold tracking-tight text-slate-100">{title}</h2>
 
         {description && (
-          <p className="mt-4 max-w-3xl text-lg text-slate-300">
+          <p className="mt-1 max-w-3xl text-xs text-slate-300">
             {description}
           </p>
         )}
       </div>
 
       {actions && (
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           {actions}
         </div>
       )}

@@ -40,6 +40,7 @@ export default async function MissionControlChatPage() {
           messages: messages.map((message) => ({
             id: message.id,
             senderName: message.sender_name || "COC",
+            senderType: message.sender_type,
             unitName: message.unit_name,
             entryNumber: message.entry_number,
             messageBody: message.message_body,

@@ -17,6 +17,7 @@ type MapSpot = {
 type LiveStagingMapProps = {
   spots: MapSpot[];
   editBasePath?: string;
+  fillHeight?: boolean;
 };
 
 function formatStatus(status: string | null | undefined) {
@@ -44,7 +45,11 @@ function highlightSpotCard(spotId: string) {
   }, 2500);
 }
 
-export function LiveStagingMap({ spots, editBasePath }: LiveStagingMapProps) {
+export function LiveStagingMap({
+  spots,
+  editBasePath,
+  fillHeight = false,
+}: LiveStagingMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
@@ -140,7 +145,12 @@ export function LiveStagingMap({ spots, editBasePath }: LiveStagingMapProps) {
   }, [spots, editBasePath]);
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950">
+    <div
+      className={[
+        "overflow-hidden rounded-3xl border border-slate-800 bg-slate-950",
+        fillHeight ? "h-full min-h-0" : "",
+      ].join(" ")}
+    >
       <style jsx global>{`
         .mapboxgl-popup-content {
           background: #020617 !important;
@@ -155,7 +165,7 @@ export function LiveStagingMap({ spots, editBasePath }: LiveStagingMapProps) {
         }
       `}</style>
 
-      <div ref={mapContainer} className="h-[520px] w-full" />
+      <div ref={mapContainer} className={fillHeight ? "h-full min-h-0 w-full" : "h-[520px] w-full"} />
     </div>
   );
 }

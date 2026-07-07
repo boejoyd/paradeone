@@ -1,5 +1,4 @@
 import { MobileNav } from "@/components/navigation/MobileNav";
-import { Sidebar } from "@/components/navigation/Sidebar";
 import { getCurrentUser } from "@/lib/auth";
 
 type AppShellProps = {
@@ -12,13 +11,10 @@ export async function AppShell({ children }: AppShellProps) {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <MobileNav />
+      <MobileNav userEmail={userEmail} />
 
-      <div className="flex min-h-screen w-full">
-        <Sidebar userEmail={userEmail} />
-        <section className="flex-1 px-5 py-6 md:px-8 md:py-8">
-          {children}
-        </section>
+      <div className="w-full">
+        <section className="px-3 py-2 sm:px-4 md:px-5 md:py-3">{children}</section>
       </div>
     </main>
   );
