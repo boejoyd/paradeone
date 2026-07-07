@@ -48,9 +48,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-400">
               ParadeOne
             </p>
-            <h1 className="text-4xl font-semibold">Welcome back</h1>
+            <h1 className="text-4xl font-semibold">Professional Parade Management</h1>
             <p className="text-lg text-slate-400">
-              Sign in to manage your parade operations or create a new account.
+              Manage organizations, registrations, lineups, check-in, GPS tracking,
+              and Mission Control from one place.
             </p>
           </div>
 

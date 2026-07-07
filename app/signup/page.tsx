@@ -73,7 +73,10 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
               </form>
               <div className="mt-6 text-sm text-slate-400">
                 Already have an account?{" "}
-                <Link href={loginHref} className="font-semibold text-slate-100 hover:text-blue-400">
+                <Link
+                  href={loginHref}
+                  className="font-semibold text-slate-100 hover:text-blue-400"
+                >
                   Sign In
                 </Link>
               </div>
