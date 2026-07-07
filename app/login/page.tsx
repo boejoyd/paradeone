@@ -53,12 +53,20 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </p>
           </div>
 
-          <details className="group relative shrink-0">
-            <summary className="list-none rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-blue-400 hover:text-white [&::-webkit-details-marker]:hidden">
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              popoverTarget="create-account-popover"
+              className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-blue-400 hover:text-white"
+            >
               Create Account
-            </summary>
+            </button>
 
-            <div className="absolute right-0 top-full z-10 mt-4 w-[min(28rem,calc(100vw-3rem))]">
+            <div
+              id="create-account-popover"
+              popover="auto"
+              className="absolute right-0 top-full z-10 mt-4 w-[min(28rem,calc(100vw-3rem))] rounded-2xl bg-transparent p-0 text-inherit backdrop:bg-slate-950/50"
+            >
               <Card title="Create account">
                 <form action={signUp} className="mt-4 space-y-4">
                   <input type="hidden" name="redirect" value={redirectTo} />
@@ -86,7 +94,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 </form>
               </Card>
             </div>
-          </details>
+          </div>
         </div>
 
         {message ? (
