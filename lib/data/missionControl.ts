@@ -15,6 +15,8 @@ type MissionControlMapData = {
   editBasePath?: string;
   organizationName?: string;
   eventName?: string;
+  organizationId?: string;
+  eventId?: string;
 };
 
 export async function getMissionControlMapData(): Promise<MissionControlMapData> {
@@ -54,5 +56,7 @@ export async function getMissionControlMapData(): Promise<MissionControlMapData>
         : undefined,
     organizationName: org?.name,
     eventName: eventRow.name,
+    organizationId: eventRow.organization_id,
+    eventId: eventRow.id,
   };
 }

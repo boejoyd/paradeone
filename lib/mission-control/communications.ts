@@ -1,0 +1,158 @@
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+export type MissionControlSenderType = "coc" | "float" | "volunteer" | "system";
+export type MissionControlMessageType = "chat" | "status" | "assistance" | "system";
+
+export type MissionControlMessage = {
+  id: string;
+  organization_id: string;
+  event_id: string | null;
+  parade_unit_id: string | null;
+  sender_user_id: string | null;
+  sender_type: MissionControlSenderType;
+  sender_name: string | null;
+  sender_role: string | null;
+  unit_name: string | null;
+  entry_number: number | null;
+  message_body: string;
+  message_type: MissionControlMessageType;
+  created_at: string;
+};
+
+export type ListMissionControlMessagesInput = {
+  organizationId: string;
+  eventId?: string;
+  paradeUnitId?: string;
+  limit?: number;
+};
+
+export type SendMissionControlMessageInput = {
+  organizationId: string;
+  eventId?: string | null;
+  paradeUnitId?: string | null;
+  senderUserId?: string | null;
+  senderType?: MissionControlSenderType;
+  senderName?: string | null;
+  senderRole?: string | null;
+  unitName?: string | null;
+  entryNumber?: number | null;
+  messageBody: string;
+  messageType?: MissionControlMessageType;
+};
+
+const MESSAGE_SELECT = `
+  id,
+  organization_id,
+  event_id,
+  parade_unit_id,
+  sender_user_id,
+  sender_type,
+  sender_name,
+  sender_role,
+  unit_name,
+  entry_number,
+  message_body,
+  message_type,
+  created_at
+`;
+
+function isMissingMissionControlMessagesTableError(error: {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+}): boolean {
+  const code = error.code ?? "";
+  const combined = [error.message, error.details, error.hint]
+    .filter((value): value is string => Boolean(value))
+    .join(" ")
+    .toLowerCase();
+
+  if (code === "42P01" || code === "PGRST205") {
+    return combined.includes("mission_control_messages");
+  }
+
+  return (
+    combined.includes("mission_control_messages") &&
+    (combined.includes("does not exist") ||
+      combined.includes("cannot be found") ||
+      combined.includes("schema cache"))
+  );
+}
+
+function sanitizeText(value: string | null | undefined): string | null {
+  if (value == null) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export async function listMissionControlMessages(
+  input: ListMissionControlMessagesInput
+): Promise<MissionControlMessage[]> {
+  const supabase = await createServerSupabaseClient();
+
+  let query = supabase
+    .from("mission_control_messages")
+    .select(MESSAGE_SELECT)
+    .eq("organization_id", input.organizationId)
+    .order("created_at", { ascending: true })
+    .limit(input.limit ?? 200);
+
+  if (input.eventId) {
+    query = query.eq("event_id", input.eventId);
+  }
+
+  if (input.paradeUnitId) {
+    query = query.eq("parade_unit_id", input.paradeUnitId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    if (isMissingMissionControlMessagesTableError(error)) {
+      return [];
+    }
+
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as MissionControlMessage[];
+}
+
+export async function sendMissionControlMessage(
+  input: SendMissionControlMessageInput
+): Promise<MissionControlMessage> {
+  const supabase = await createServerSupabaseClient();
+  const messageBody = input.messageBody.trim();
+
+  if (!messageBody) {
+    throw new Error("Message body is required.");
+  }
+
+  const { data, error } = await supabase
+    .from("mission_control_messages")
+    .insert({
+      organization_id: input.organizationId,
+      event_id: input.eventId ?? null,
+      parade_unit_id: input.paradeUnitId ?? null,
+      sender_user_id: input.senderUserId ?? null,
+      sender_type: input.senderType ?? "coc",
+      sender_name: sanitizeText(input.senderName),
+      sender_role: sanitizeText(input.senderRole),
+      unit_name: sanitizeText(input.unitName),
+      entry_number: input.entryNumber ?? null,
+      message_body: messageBody,
+      message_type: input.messageType ?? "chat",
+    })
+    .select(MESSAGE_SELECT)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as MissionControlMessage;
+}

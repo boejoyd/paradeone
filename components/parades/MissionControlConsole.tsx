@@ -29,6 +29,15 @@ type ChatMessage = {
   body: string;
 };
 
+type MissionControlDbMessage = {
+  id: string;
+  senderName: string;
+  unitName: string | null;
+  entryNumber: number | null;
+  messageBody: string;
+  createdAt: string;
+};
+
 type QueueItem = {
   id: string;
   title: string;
@@ -43,6 +52,12 @@ type MissionControlConsoleProps = {
   liveMapSpots?: MissionControlMapSpot[];
   liveMapEditBasePath?: string;
   activeParadeLabel?: string;
+  communications?: {
+    organizationId?: string;
+    eventId?: string;
+    messages?: MissionControlDbMessage[];
+    sendMessageAction?: (formData: FormData) => void | Promise<void>;
+  };
 };
 
 const panelRoutes: Record<MissionControlPanelKey, string> = {
@@ -264,24 +279,105 @@ function MissionControlUnitsPanel({ dedicated }: { dedicated: boolean }) {
 
 function MissionControlChatPanel({ dedicated }: { dedicated: boolean }) {
   return (
+    <MissionControlChatPanelWithData dedicated={dedicated} />
+  );
+}
+
+function MissionControlChatPanelWithData({
+  dedicated,
+  communications,
+}: {
+  dedicated: boolean;
+  communications?: MissionControlConsoleProps["communications"];
+}) {
+  const dbMessages = communications?.messages ?? [];
+  const hasContext = Boolean(communications?.organizationId);
+  const hasDbMessages = dbMessages.length > 0;
+
+  return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950">
       <div className={dedicated ? "space-y-4 p-4 md:p-6 lg:max-h-[700px] lg:overflow-auto" : "space-y-4 p-4 md:p-6"}>
-        {chatMessages.map((message) => (
-          <article key={message.id} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-semibold text-white">{message.sender}</p>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{message.role}</p>
-              </div>
-              <span className="text-xs text-slate-500">{message.time}</span>
-            </div>
-            <p className="mt-3 text-sm leading-7 text-slate-300">{message.body}</p>
-          </article>
-        ))}
+        {hasDbMessages
+          ? dbMessages.map((message) => {
+              const titleParts = [
+                message.senderName,
+                message.unitName,
+                message.entryNumber != null ? String(message.entryNumber) : null,
+              ].filter((value): value is string => Boolean(value));
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
-          Sample only: no real chat backend, SMS, or participant messaging is connected.
-        </div>
+              return (
+                <article key={message.id} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="font-semibold text-white">{titleParts.join(" — ")}</p>
+                    <span className="text-xs text-slate-500">
+                      {new Date(message.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-slate-300">{message.messageBody}</p>
+                </article>
+              );
+            })
+          : chatMessages.map((message) => (
+              <article key={message.id} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-white">{message.sender}</p>
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{message.role}</p>
+                  </div>
+                  <span className="text-xs text-slate-500">{message.time}</span>
+                </div>
+                <p className="mt-3 text-sm leading-7 text-slate-300">{message.body}</p>
+              </article>
+            ))}
+
+        {hasContext && communications?.sendMessageAction ? (
+          <form action={communications.sendMessageAction} className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+            <input type="hidden" name="organizationId" value={communications.organizationId} />
+            <input type="hidden" name="eventId" value={communications.eventId ?? ""} />
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <input
+                name="senderName"
+                placeholder="Joe Schmoe"
+                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+                required
+              />
+              <input
+                name="unitName"
+                placeholder="Nackte"
+                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+              />
+              <input
+                name="entryNumber"
+                type="number"
+                min="1"
+                placeholder="22"
+                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+              />
+            </div>
+
+            <textarea
+              name="messageBody"
+              rows={3}
+              placeholder="COC message"
+              className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+              required
+            />
+
+            <div className="mt-3 flex justify-end">
+              <Button type="submit">Send</Button>
+            </div>
+          </form>
+        ) : null}
+
+        {!hasDbMessages ? (
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
+            Sample fallback only when event/organization communications context is unavailable.
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -320,7 +416,8 @@ function renderPanel(
     liveMapSpots: MissionControlMapSpot[];
     liveMapEditBasePath?: string;
     activeParadeLabel?: string;
-  }
+  },
+  communications?: MissionControlConsoleProps["communications"]
 ) {
   switch (key) {
     case "map":
@@ -334,7 +431,7 @@ function renderPanel(
     case "units":
       return <MissionControlUnitsPanel dedicated={dedicated} />;
     case "chat":
-      return <MissionControlChatPanel dedicated={dedicated} />;
+      return <MissionControlChatPanelWithData dedicated={dedicated} communications={communications} />;
     case "queue":
       return <MissionControlQueuePanel dedicated={dedicated} />;
   }
@@ -348,6 +445,7 @@ function MissionControlPanelShell({
   liveMapSpots,
   liveMapEditBasePath,
   activeParadeLabel,
+  communications,
 }: {
   panel: MissionControlPanelKey;
   dedicated: boolean;
@@ -356,6 +454,7 @@ function MissionControlPanelShell({
   liveMapSpots?: MissionControlMapSpot[];
   liveMapEditBasePath?: string;
   activeParadeLabel?: string;
+  communications?: MissionControlConsoleProps["communications"];
 }) {
   const panelMeta: Record<MissionControlPanelKey, { title: string; icon: string }> = {
     map: { icon: "🗺", title: "Live Map" },
@@ -401,7 +500,7 @@ function MissionControlPanelShell({
         liveMapSpots: liveMapSpots ?? [],
         liveMapEditBasePath,
         activeParadeLabel,
-      })}
+      }, communications)}
     </section>
   );
 }
@@ -411,6 +510,7 @@ export function MissionControlConsole({
   liveMapSpots = [],
   liveMapEditBasePath,
   activeParadeLabel,
+  communications,
 }: MissionControlConsoleProps) {
   const [expandedPanel, setExpandedPanel] = useState<MissionControlPanelKey | null>(null);
   const isCombined = view === "combined";
@@ -445,6 +545,7 @@ export function MissionControlConsole({
                 dedicated={false}
                 onFullScreen={setExpandedPanel}
                 active={expandedPanel === "chat"}
+                communications={communications}
               />
             </div>
 
@@ -473,6 +574,7 @@ export function MissionControlConsole({
             liveMapSpots={liveMapSpots}
             liveMapEditBasePath={liveMapEditBasePath}
             activeParadeLabel={activeParadeLabel}
+            communications={communications}
           />
         </div>
       ) : null}
@@ -490,7 +592,7 @@ export function MissionControlConsole({
                 liveMapSpots,
                 liveMapEditBasePath,
                 activeParadeLabel,
-              })}
+              }, communications)}
             </div>
           </div>
         </div>

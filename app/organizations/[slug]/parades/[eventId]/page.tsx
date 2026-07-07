@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { listMissionControlMessages } from "@/lib/mission-control/communications";
 import { supabase } from "@/lib/supabase";
+import { sendMissionControlMessageAction } from "./actions";
 
 type ParadePageProps = {
   params: Promise<{
@@ -54,6 +56,11 @@ export default async function ParadePage({ params }: ParadePageProps) {
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId)
     .not("staging_spot_id", "is", null);
+
+  const messages = await listMissionControlMessages({
+    organizationId: organization.id,
+    eventId,
+  });
 
   const missingCount = (entryCount || 0) - (checkedInCount || 0);
 
@@ -148,6 +155,73 @@ export default async function ParadePage({ params }: ParadePageProps) {
             Live check-ins, section releases, GPS movement, SMS alerts, and
             announcer/judge tools will flow through Mission Control.
           </p>
+          <div id="communications" className="mt-4 space-y-4">
+            <div className="max-h-72 space-y-3 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950 p-4">
+              {messages.length > 0 ? (
+                messages.map((message) => {
+                  const titleParts = [
+                    message.sender_name,
+                    message.unit_name,
+                    message.entry_number?.toString(),
+                  ].filter((value): value is string => Boolean(value));
+
+                  return (
+                    <div key={message.id} className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+                      <p className="text-sm font-semibold text-white">
+                        {titleParts.join(" — ")}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-300">{message.message_body}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {new Date(message.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-slate-400">
+                  No communications yet. COC messages will appear here.
+                </p>
+              )}
+            </div>
+
+            <form action={sendMissionControlMessageAction} className="space-y-3 rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <input type="hidden" name="slug" value={slug} />
+              <input type="hidden" name="eventId" value={eventId} />
+              <input type="hidden" name="organizationId" value={organization.id} />
+              <input type="hidden" name="senderRole" value="COC" />
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <input
+                  name="senderName"
+                  placeholder="Sender name"
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                  required
+                />
+                <input
+                  name="unitName"
+                  placeholder="Unit name"
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                />
+                <input
+                  name="entryNumber"
+                  type="number"
+                  min="1"
+                  placeholder="Entry #"
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                />
+              </div>
+
+              <textarea
+                name="messageBody"
+                rows={3}
+                placeholder="Send a message as COC"
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                required
+              />
+
+              <Button type="submit">Send Message</Button>
+            </form>
+          </div>
         </Card>
       </div>
     </AppShell>
