@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import { LiveStagingMap } from "@/components/maps/LiveStagingMap";
 import { Button } from "@/components/ui/Button";
@@ -69,9 +69,9 @@ type MissionControlConsoleProps = {
   };
 };
 
-type DragAxis = "vertical" | "horizontal";
+type DragAxis = "vertical" | "horizontal" | "units-bottom";
 
-const WORKSPACE_SPLIT_STORAGE_KEY = "mission-control.workspace.splits.v1";
+const WORKSPACE_SPLIT_STORAGE_KEY = "mission-control.workspace.splits.v3";
 
 const panelRoutes: Record<MissionControlPanelKey, string> = {
   map: "/mission-control/map",
@@ -211,8 +211,8 @@ const queueItems: QueueItem[] = [
 
 function panelShellClass(dedicated: boolean) {
   return dedicated
-    ? "rounded-2xl border border-slate-800/70 bg-slate-900 p-3 shadow-2xl shadow-slate-950/35 md:p-4"
-    : "rounded-2xl border border-slate-800/70 bg-slate-900 p-2.5 shadow-xl shadow-slate-950/25 md:p-3";
+    ? "rounded-2xl border border-slate-800/70 bg-slate-900 px-1.5 py-2 shadow-2xl shadow-slate-950/35 md:px-1.5 md:py-2.5"
+    : "rounded-2xl border border-slate-800/70 bg-slate-900 px-1 py-1.5 shadow-xl shadow-slate-950/25 md:px-1 md:py-2";
 }
 
 function priorityTone(priority: QueueItem["priority"]) {
@@ -236,31 +236,34 @@ function MissionControlMapPanel({
   liveMapEditBasePath?: string;
   activeParadeLabel?: string;
 }) {
-  const hasSpots = liveMapSpots.length > 0;
+  const quickInfoCards = [
+    { label: "Floats Checked In", value: "26" },
+    { label: "Floats Missing", value: "7" },
+    { label: "Volunteers Checked In", value: "84" },
+    { label: "Volunteers Missing", value: "11" },
+    { label: "Countdown to Push-Off", value: "00:18:40" },
+  ];
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2.5 overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
       <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-800/70">
         <LiveStagingMap spots={liveMapSpots} editBasePath={liveMapEditBasePath} fillHeight />
       </div>
 
-      <div className={["grid gap-2.5", dedicated ? "md:grid-cols-3" : "sm:grid-cols-3"].join(" ")}>
-        <div className="rounded-xl border border-slate-800/70 bg-slate-900/80 p-3 text-sm text-slate-300">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Source</p>
-          <p className="mt-1.5 font-semibold text-white">Shared Staging Live Map</p>
-          <p className="mt-1">Reuses the map component and marker logic from staging.</p>
-        </div>
-        <div className="rounded-xl border border-slate-800/70 bg-slate-900/80 p-3 text-sm text-slate-300">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Active Parade</p>
-          <p className="mt-1.5 font-semibold text-white">{activeParadeLabel ?? "No active parade selected"}</p>
-          <p className="mt-1">{hasSpots ? `${liveMapSpots.length} staging spots loaded.` : "No staging spots loaded yet."}</p>
-        </div>
-        <div className="rounded-xl border border-slate-800/70 bg-slate-900/80 p-3 text-sm text-slate-300">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Notes</p>
-          <p className="mt-1.5 font-semibold text-white">Live GPS View</p>
-          <p className="mt-1">No new map backend added. Uses existing staging experience.</p>
-        </div>
+      <div className={["grid gap-1.5", dedicated ? "md:grid-cols-5" : "sm:grid-cols-2 lg:grid-cols-5"].join(" ")}>
+        {quickInfoCards.map((card) => (
+          <article key={card.label} className="rounded-lg border border-slate-800/70 bg-slate-900/80 px-2 py-1.5 text-xs text-slate-300">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">{card.label}</p>
+            <p className="mt-1 truncate font-semibold text-white">{card.value}</p>
+          </article>
+        ))}
       </div>
+
+      {dedicated ? (
+        <p className="text-[11px] text-slate-400">
+          Active parade: {activeParadeLabel ?? "No active parade selected"} • Staging spots: {liveMapSpots.length}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -365,9 +368,18 @@ function MissionControlChatPanelWithData({
   const channelMessageType = selectedChannel === "broadcast" ? "system" : "chat";
   const channelSenderName = "COC";
 
+  const handleComposeKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-800/70 bg-slate-950/85">
-      <div className="shrink-0 border-b border-slate-800/70 p-3 md:p-4 md:pb-3">
+      <div className="shrink-0 border-b border-slate-800/70 p-2 md:px-3 md:py-2">
         <div className="flex flex-wrap items-center gap-1.5">
           {communicationChannels.map((channel) => (
             <button
@@ -399,7 +411,7 @@ function MissionControlChatPanelWithData({
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto p-3 md:px-4 md:pt-3">
+      <div className="min-h-0 flex-1 overflow-auto p-2 md:px-3 md:py-2">
         <div className="rounded-lg border border-slate-800/70 bg-slate-950 p-3">
           {filteredMessages.length > 0 ? (
             filteredMessages.map((message, index) => {
@@ -426,25 +438,31 @@ function MissionControlChatPanelWithData({
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-slate-800/70 p-3 md:px-4 md:pb-4 md:pt-3">
+      <div className="shrink-0 border-t border-slate-800/70 p-1.5 md:px-2 md:py-1.5">
         {hasContext && communications?.sendMessageAction ? (
-          <form action={communications.sendMessageAction} className="rounded-lg border border-slate-800/70 bg-slate-950 p-3">
+          <form action={communications.sendMessageAction} className="rounded-md border border-slate-800/70 bg-slate-950 p-1.5">
             <input type="hidden" name="organizationId" value={communications.organizationId} />
             <input type="hidden" name="eventId" value={communications.eventId ?? ""} />
             <input type="hidden" name="senderType" value={channelSenderType} />
             <input type="hidden" name="messageType" value={channelMessageType} />
             <input type="hidden" name="senderName" value={channelSenderName} />
 
-            <textarea
-              name="messageBody"
-              rows={4}
-              placeholder="Send a message"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-              required
-            />
+            <div className="flex items-center gap-1.5">
+              <textarea
+                name="messageBody"
+                rows={1}
+                placeholder="Send a message"
+                onKeyDown={handleComposeKeyDown}
+                className="h-8 min-h-8 flex-1 resize-none rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm leading-5 text-white"
+                required
+              />
 
-            <div className="mt-2.5 flex justify-end">
-              <Button type="submit">Send</Button>
+              <button
+                type="submit"
+                className="inline-flex h-8 min-h-8 items-center rounded-md border border-blue-400 bg-blue-500 px-3 text-xs font-semibold text-white transition hover:bg-blue-400"
+              >
+                Send
+              </button>
             </div>
           </form>
         ) : null}
@@ -558,6 +576,8 @@ function MissionControlPanelShell({
             className={controlLinkClass()}
             title="Open on Another Screen"
             aria-label="Open on Another Screen"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             ↗
           </Link>
@@ -573,7 +593,7 @@ function MissionControlPanelShell({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden pt-2.5">
+      <div className="min-h-0 flex-1 overflow-hidden pt-1">
         {renderPanel(panel, dedicated, {
           liveMapSpots: liveMapSpots ?? [],
           liveMapEditBasePath,
@@ -593,9 +613,11 @@ export function MissionControlConsole({
 }: MissionControlConsoleProps) {
   const [expandedPanel, setExpandedPanel] = useState<MissionControlPanelKey | null>(null);
   const [leftPanePercent, setLeftPanePercent] = useState(65);
-  const [topPanePercent, setTopPanePercent] = useState(68);
+  const [topPaneHeight, setTopPaneHeight] = useState(460);
+  const [unitsPaneMinHeight, setUnitsPaneMinHeight] = useState(320);
   const [dragAxis, setDragAxis] = useState<DragAxis | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const unitsPaneRef = useRef<HTMLDivElement | null>(null);
   const isCombined = view === "combined";
   const focusedPanel = isCombined ? null : view;
 
@@ -612,6 +634,8 @@ export function MissionControlConsole({
     try {
       const parsed = JSON.parse(raw) as {
         leftPanePercent?: number;
+        topPaneHeight?: number;
+        unitsPaneMinHeight?: number;
         topPanePercent?: number;
       };
 
@@ -619,8 +643,15 @@ export function MissionControlConsole({
         setLeftPanePercent(Math.min(75, Math.max(35, parsed.leftPanePercent)));
       }
 
-      if (typeof parsed.topPanePercent === "number") {
-        setTopPanePercent(Math.min(82, Math.max(55, parsed.topPanePercent)));
+      if (typeof parsed.topPaneHeight === "number") {
+        setTopPaneHeight(Math.min(1400, Math.max(280, parsed.topPaneHeight)));
+      } else if (typeof parsed.topPanePercent === "number") {
+        const fallbackHeight = (parsed.topPanePercent / 100) * Math.max(window.innerHeight - 220, 420);
+        setTopPaneHeight(Math.min(1400, Math.max(280, fallbackHeight)));
+      }
+
+      if (typeof parsed.unitsPaneMinHeight === "number") {
+        setUnitsPaneMinHeight(Math.min(1800, Math.max(220, parsed.unitsPaneMinHeight)));
       }
     } catch {
       // Ignore malformed persisted values.
@@ -634,9 +665,9 @@ export function MissionControlConsole({
 
     window.localStorage.setItem(
       WORKSPACE_SPLIT_STORAGE_KEY,
-      JSON.stringify({ leftPanePercent, topPanePercent })
+      JSON.stringify({ leftPanePercent, topPaneHeight, unitsPaneMinHeight })
     );
-  }, [leftPanePercent, topPanePercent]);
+  }, [leftPanePercent, topPaneHeight, unitsPaneMinHeight]);
 
   useEffect(() => {
     if (!dragAxis) {
@@ -650,7 +681,7 @@ export function MissionControlConsole({
       }
 
       const rect = workspace.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) {
+      if (rect.width <= 0) {
         return;
       }
 
@@ -660,8 +691,20 @@ export function MissionControlConsole({
         return;
       }
 
-      const ratio = ((event.clientY - rect.top) / rect.height) * 100;
-      setTopPanePercent(Math.min(82, Math.max(55, ratio)));
+      if (dragAxis === "units-bottom") {
+        const unitsPane = unitsPaneRef.current;
+        if (!unitsPane) {
+          return;
+        }
+
+        const unitsRect = unitsPane.getBoundingClientRect();
+        const nextHeight = event.clientY - unitsRect.top;
+        setUnitsPaneMinHeight(Math.min(1800, Math.max(220, nextHeight)));
+        return;
+      }
+
+      const nextHeight = event.clientY - rect.top;
+      setTopPaneHeight(Math.min(1400, Math.max(280, nextHeight)));
     };
 
     const onPointerUp = () => {
@@ -678,13 +721,13 @@ export function MissionControlConsole({
   }, [dragAxis]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {isCombined ? (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-sm uppercase tracking-[0.4em] text-slate-400">ParadeOne</p>
-            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">Mission Control</h1>
-            <p className="max-w-3xl text-base text-slate-300">
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-[0.32em] text-slate-400">ParadeOne</p>
+            <h1 className="text-lg font-semibold tracking-tight text-white md:text-xl">Mission Control</h1>
+            <p className="max-w-3xl text-xs text-slate-300 md:text-sm">
               Command-room overview for live map visibility, communications, operations feed, and parade roster management.
             </p>
           </div>
@@ -725,12 +768,11 @@ export function MissionControlConsole({
               dragAxis ? "select-none" : "",
             ].join(" ")}
             style={{
-              height: "calc(100dvh - 12.5rem)",
               gridTemplateColumns: `minmax(0, ${leftPanePercent}fr) 8px minmax(0, ${100 - leftPanePercent}fr)`,
-              gridTemplateRows: `minmax(0, ${topPanePercent}fr) 8px minmax(0, ${100 - topPanePercent}fr)`,
+              gridTemplateRows: `${topPaneHeight}px 8px minmax(${unitsPaneMinHeight}px, auto)`,
             }}
           >
-            <div className="col-[1] row-[1] min-h-0 min-w-0 pr-2">
+            <div className="col-[1] row-[1] min-h-0 min-w-0 pr-0.5">
               <MissionControlPanelShell
                 panel="map"
                 dedicated={false}
@@ -749,7 +791,7 @@ export function MissionControlConsole({
               aria-label="Resize live map and communications"
             />
 
-            <div className="col-[3] row-[1] min-h-0 min-w-0 pl-2">
+            <div className="col-[3] row-[1] min-h-0 min-w-0 pl-0.5">
               <MissionControlPanelShell
                 panel="chat"
                 dedicated={false}
@@ -766,28 +808,41 @@ export function MissionControlConsole({
               aria-label="Resize top panels and parade units"
             />
 
-            <div className="col-[1/4] row-[3] min-h-0 min-w-0 pt-2">
-              <MissionControlPanelShell
-                panel="units"
-                dedicated={false}
-                onFullScreen={setExpandedPanel}
-                active={expandedPanel === "units"}
-              />
+            <div ref={unitsPaneRef} className="col-[1/4] row-[3] min-h-0 min-w-0 pt-0.5">
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="min-h-0 flex-1">
+                  <MissionControlPanelShell
+                    panel="units"
+                    dedicated={false}
+                    onFullScreen={setExpandedPanel}
+                    active={expandedPanel === "units"}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  className="mt-1 h-2 w-full cursor-row-resize rounded bg-slate-800/80 transition hover:bg-blue-500/70"
+                  onPointerDown={() => setDragAxis("units-bottom")}
+                  aria-label="Resize parade units bottom edge"
+                />
+              </div>
             </div>
           </div>
         </div>
       ) : focusedPanel ? (
-        <div className="space-y-4">
-          <MissionControlPanelShell
-            panel={focusedPanel}
-            dedicated
-            onFullScreen={setExpandedPanel}
-            active={expandedPanel === focusedPanel}
-            liveMapSpots={liveMapSpots}
-            liveMapEditBasePath={liveMapEditBasePath}
-            activeParadeLabel={activeParadeLabel}
-            communications={communications}
-          />
+        <div className="min-h-[calc(100dvh-6.25rem)]">
+          <div className="h-full min-h-0">
+            <MissionControlPanelShell
+              panel={focusedPanel}
+              dedicated
+              onFullScreen={setExpandedPanel}
+              active={expandedPanel === focusedPanel}
+              liveMapSpots={liveMapSpots}
+              liveMapEditBasePath={liveMapEditBasePath}
+              activeParadeLabel={activeParadeLabel}
+              communications={communications}
+            />
+          </div>
         </div>
       ) : null}
 

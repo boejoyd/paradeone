@@ -144,6 +144,38 @@ export function LiveStagingMap({
     };
   }, [spots, editBasePath]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    const container = mapContainer.current;
+
+    if (!map || !container) {
+      return;
+    }
+
+    const resizeMap = () => {
+      map.resize();
+    };
+
+    resizeMap();
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(() => {
+        resizeMap();
+      });
+      observer.observe(container);
+
+      return () => {
+        observer.disconnect();
+      };
+    }
+
+    window.addEventListener("resize", resizeMap);
+
+    return () => {
+      window.removeEventListener("resize", resizeMap);
+    };
+  }, [spots, editBasePath, fillHeight]);
+
   return (
     <div
       className={[
@@ -165,7 +197,10 @@ export function LiveStagingMap({
         }
       `}</style>
 
-      <div ref={mapContainer} className={fillHeight ? "h-full min-h-0 w-full" : "h-[520px] w-full"} />
+      <div
+        ref={mapContainer}
+        className={fillHeight ? "h-full min-h-0 w-full" : "h-full min-h-[520px] w-full"}
+      />
     </div>
   );
 }
