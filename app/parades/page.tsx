@@ -4,7 +4,8 @@ import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { OpenMissionControlButton } from "@/components/parades/OpenMissionControlButton";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
+import { listAccessibleOrganizations } from "@/lib/organizations/access";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 function formatStatus(status: string | null | undefined) {
   if (!status) return "Unknown";
@@ -15,9 +16,36 @@ function formatStatus(status: string | null | undefined) {
 }
 
 export default async function ParadesPage() {
+  const organizations = await listAccessibleOrganizations();
+  const organizationIds = organizations.map((organization) => organization.id);
+
+  if (organizationIds.length === 0) {
+    return (
+      <AppShell>
+        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Parades" }]} />
+
+        <Card title="All Parades">
+          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950 p-8 text-center">
+            <h3 className="text-xl font-semibold text-white">No organization access</h3>
+            <p className="mx-auto mt-3 max-w-xl text-slate-400">
+              Create an organization or ask an owner to invite you.
+            </p>
+            <div className="mt-6">
+              <Link href="/create-parade">
+                <Button>Create Parade</Button>
+              </Link>
+            </div>
+          </div>
+        </Card>
+      </AppShell>
+    );
+  }
+
+  const supabase = await createServerSupabaseClient();
   const { data: events, error } = await supabase
     .from("events")
     .select("id, name, event_date, status, city, organizations(name, slug)")
+    .in("organization_id", organizationIds)
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);

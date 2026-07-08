@@ -14,6 +14,9 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   const normalized = status || "unknown";
 
   const styles: Record<string, string> = {
+    ready: "border-green-800 bg-green-950 text-green-300",
+    getting_ready: "border-yellow-800 bg-yellow-950 text-yellow-300",
+    needs_assistance: "border-red-700 bg-red-950 text-red-300",
     checked_in: "border-green-800 bg-green-950 text-green-300",
     not_checked_in: "border-slate-700 bg-slate-900 text-slate-300",
     draft: "border-slate-700 bg-slate-900 text-slate-300",

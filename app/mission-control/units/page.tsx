@@ -1,9 +1,26 @@
 import Link from "next/link";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { MissionControlConsole } from "@/components/parades/MissionControlConsole";
+import { getMissionControlMapData } from "@/lib/data/missionControl";
 
-export default function MissionControlUnitsPage() {
+export default async function MissionControlUnitsPage() {
+  const mapData = await getMissionControlMapData();
+
+  if (!mapData.hasOrganizationMembership) {
+    return (
+      <AppShell>
+        <EmptyState
+          title="No organization access"
+          description="Create an organization or ask an owner to invite you."
+          actionHref="/create-parade"
+          actionLabel="Create Your First Parade"
+        />
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="mb-2 flex items-center justify-between">
@@ -17,7 +34,7 @@ export default function MissionControlUnitsPage() {
       </div>
 
       <div className="min-h-[calc(100dvh-5.75rem)]">
-        <MissionControlConsole view="units" />
+        <MissionControlConsole view="units" liveMapSpots={mapData.spots} />
       </div>
     </AppShell>
   );

@@ -3,7 +3,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { LiveStagingMap } from "@/components/maps/LiveStagingMap";
-import { supabase } from "@/lib/supabase";
+import { requireAccessibleEventContext } from "@/lib/organizations/access";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type StagingPageProps = {
   params: Promise<{
@@ -15,17 +16,8 @@ type StagingPageProps = {
 export default async function StagingPage({ params }: StagingPageProps) {
   const { slug, eventId } = await params;
 
-  const { data: organization } = await supabase
-    .from("organizations")
-    .select("name, slug")
-    .eq("slug", slug)
-    .single();
-
-  const { data: event } = await supabase
-    .from("events")
-    .select("name")
-    .eq("id", eventId)
-    .single();
+  const { organization, event } = await requireAccessibleEventContext(slug, eventId);
+  const supabase = await createServerSupabaseClient();
 
   const { data: spots, error } = await supabase
     .from("staging_spots")
@@ -43,7 +35,7 @@ export default async function StagingPage({ params }: StagingPageProps) {
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },
-          { label: "Organizations", href: "/organizations" },
+          { label: "Parade Setup", href: "/organizations" },
           {
             label: organization?.name || "Organization",
             href: `/organizations/${slug}`,

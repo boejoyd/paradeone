@@ -7,7 +7,7 @@ import { signOut } from "@/app/login/actions";
 
 const navItems = [
   { label: "Mission Control", href: "/" },
-  { label: "Organizations", href: "/organizations" },
+  { label: "Parade Setup", href: "/organizations" },
   { label: "Reports", href: "/reports" },
   { label: "Settings", href: "/settings" },
 ];

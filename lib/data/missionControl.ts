@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { getUserOrganizationIds, requireUser } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type MissionControlMapSpot = {
   id: string;
@@ -7,7 +8,12 @@ export type MissionControlMapSpot = {
   street_name: string | null;
   latitude: number | null;
   longitude: number | null;
-  entries?: { name: string; check_in_status: string | null }[] | null;
+  entries?: {
+    id: string;
+    name: string;
+    parade_number: number | null;
+    check_in_status: string | null;
+  }[] | null;
 };
 
 type MissionControlMapData = {
@@ -17,24 +23,41 @@ type MissionControlMapData = {
   eventName?: string;
   organizationId?: string;
   eventId?: string;
+  hasOrganizationMembership: boolean;
 };
 
 export async function getMissionControlMapData(): Promise<MissionControlMapData> {
+  const user = await requireUser();
+  const organizationIds = await getUserOrganizationIds(user.id);
+
+  if (organizationIds.length === 0) {
+    return {
+      spots: [],
+      hasOrganizationMembership: false,
+    };
+  }
+
+  const supabase = await createServerSupabaseClient();
+
   const { data: eventRow } = await supabase
     .from("events")
     .select("id, name, organization_id, organizations(name, slug)")
+    .in("organization_id", organizationIds)
     .order("event_date", { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();
 
   if (!eventRow?.id) {
-    return { spots: [] };
+    return {
+      spots: [],
+      hasOrganizationMembership: true,
+    };
   }
 
   const { data: spots, error } = await supabase
     .from("staging_spots")
     .select(
-      "id, spot_code, section, street_name, latitude, longitude, geofence_radius_feet, reserved_length_feet, entries(id, name, check_in_status)"
+      "id, spot_code, section, street_name, latitude, longitude, geofence_radius_feet, reserved_length_feet, entries(id, name, parade_number, check_in_status)"
     )
     .eq("event_id", eventRow.id)
     .order("sort_order", { ascending: true, nullsFirst: false })
@@ -58,5 +81,6 @@ export async function getMissionControlMapData(): Promise<MissionControlMapData>
     eventName: eventRow.name,
     organizationId: eventRow.organization_id,
     eventId: eventRow.id,
+    hasOrganizationMembership: true,
   };
 }

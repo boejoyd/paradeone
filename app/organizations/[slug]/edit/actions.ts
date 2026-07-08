@@ -1,7 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { requireOrganizationRole } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 function slugify(value: string) {
   return value
@@ -15,6 +16,9 @@ export async function updateOrganization(formData: FormData) {
   const organizationId = String(formData.get("organizationId") || "");
   const name = String(formData.get("name") || "").trim();
   const slug = slugify(name);
+
+  await requireOrganizationRole(organizationId, ["owner", "admin"]);
+  const supabase = await createServerSupabaseClient();
 
   const { error } = await supabase
     .from("organizations")

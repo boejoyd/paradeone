@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 
 import { LiveStagingMap } from "@/components/maps/LiveStagingMap";
 import { Button } from "@/components/ui/Button";
@@ -11,14 +17,20 @@ import type { MissionControlMapSpot } from "@/lib/data/missionControl";
 type MissionControlView = "combined" | "map" | "units" | "chat" | "queue";
 type MissionControlPanelKey = Exclude<MissionControlView, "combined">;
 
+type MissionControlOperationalStatus =
+  | "ready"
+  | "getting_ready"
+  | "needs_assistance"
+  | "not_checked_in";
+
 type ParadeUnit = {
   id: string;
   name: string;
   organization: string;
   stagingSpot: string;
-  crew: number;
   eta: string;
-  status: "checked_in" | "staging" | "queued" | "departed";
+  entryNumber: number | null;
+  status: MissionControlOperationalStatus;
 };
 
 type ChatMessage = {
@@ -67,7 +79,7 @@ type MissionControlConsoleProps = {
     organizationId?: string;
     eventId?: string;
     messages?: MissionControlDbMessage[];
-    sendMessageAction?: (formData: FormData) => void | Promise<void>;
+    sendMessageAction?: unknown;
   };
 };
 
@@ -88,56 +100,92 @@ const paradeUnits: ParadeUnit[] = [
     name: "Grand Marshal Escort",
     organization: "City Parade Committee",
     stagingSpot: "A1",
-    crew: 6,
     eta: "On site",
-    status: "checked_in",
+    entryNumber: 11,
+    status: "ready",
   },
   {
     id: "unit-2",
     name: "Community Float",
     organization: "Rainbow Alliance",
     stagingSpot: "B2",
-    crew: 18,
     eta: "10 min",
-    status: "staging",
+    entryNumber: 22,
+    status: "getting_ready",
   },
   {
     id: "unit-3",
     name: "Color Guard",
     organization: "North High School",
     stagingSpot: "C3",
-    crew: 24,
     eta: "15 min",
-    status: "queued",
+    entryNumber: 33,
+    status: "getting_ready",
   },
   {
     id: "unit-4",
     name: "Marching Band",
     organization: "Downtown Music Guild",
     stagingSpot: "D4",
-    crew: 42,
     eta: "Ready",
-    status: "checked_in",
+    entryNumber: 44,
+    status: "ready",
   },
   {
     id: "unit-5",
     name: "Sponsor Vehicle",
     organization: "Parade Partners",
     stagingSpot: "E5",
-    crew: 4,
     eta: "Delayed",
-    status: "departed",
+    entryNumber: 55,
+    status: "not_checked_in",
   },
   {
     id: "unit-6",
     name: "Emergency Unit",
     organization: "First Response Group",
     stagingSpot: "F6",
-    crew: 3,
     eta: "On standby",
-    status: "checked_in",
+    entryNumber: 66,
+    status: "needs_assistance",
   },
 ];
+
+function toOperationalStatus(status: string | null | undefined): MissionControlOperationalStatus {
+  if (!status) {
+    return "not_checked_in";
+  }
+
+  if (status === "ready" || status === "checked_in") {
+    return "ready";
+  }
+
+  if (status === "getting_ready" || status === "staging" || status === "queued") {
+    return "getting_ready";
+  }
+
+  if (status === "needs_assistance") {
+    return "needs_assistance";
+  }
+
+  return "not_checked_in";
+}
+
+function unitRowTone(status: MissionControlOperationalStatus): string {
+  if (status === "needs_assistance") {
+    return "bg-red-950/45 ring-1 ring-inset ring-red-700/60";
+  }
+
+  if (status === "ready") {
+    return "bg-green-950/25";
+  }
+
+  if (status === "getting_ready") {
+    return "bg-yellow-950/25";
+  }
+
+  return "bg-slate-950/20";
+}
 
 const chatMessages: ChatMessage[] = [
   {
@@ -273,7 +321,29 @@ function MissionControlMapPanel({
   );
 }
 
-function MissionControlUnitsPanel({ dedicated }: { dedicated: boolean }) {
+function MissionControlUnitsPanel({
+  dedicated,
+  liveMapSpots,
+}: {
+  dedicated: boolean;
+  liveMapSpots: MissionControlMapSpot[];
+}) {
+  const liveUnits: ParadeUnit[] = liveMapSpots.flatMap((spot) => {
+    const entries = Array.isArray(spot.entries) ? spot.entries : [];
+
+    return entries.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      organization: spot.section || "Field Unit",
+      stagingSpot: spot.spot_code,
+      eta: toOperationalStatus(entry.check_in_status) === "ready" ? "Ready" : "Pending",
+      entryNumber: entry.parade_number,
+      status: toOperationalStatus(entry.check_in_status),
+    }));
+  });
+
+  const units = liveUnits.length > 0 ? liveUnits : paradeUnits;
+
   return (
     <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-800/70 bg-slate-950/85">
       <div className="h-full min-h-0 overflow-auto">
@@ -283,18 +353,18 @@ function MissionControlUnitsPanel({ dedicated }: { dedicated: boolean }) {
               <th className="px-3 py-2.5 font-medium md:px-4">Unit</th>
               <th className="px-3 py-2.5 font-medium md:px-4">Organization</th>
               <th className="px-3 py-2.5 font-medium md:px-4">Staging</th>
-              <th className="px-3 py-2.5 font-medium md:px-4">Crew</th>
+              <th className="px-3 py-2.5 font-medium md:px-4">Entry #</th>
               <th className="px-3 py-2.5 font-medium md:px-4">ETA</th>
               <th className="px-3 py-2.5 font-medium md:px-4">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/70 text-slate-300">
-            {paradeUnits.map((unit) => (
-              <tr key={unit.id} className="align-top">
+            {units.map((unit) => (
+              <tr key={unit.id} className={["align-top", unitRowTone(unit.status)].join(" ")}>
                 <td className="px-3 py-2.5 font-semibold text-white md:px-4">{unit.name}</td>
                 <td className="px-3 py-2.5 md:px-4">{unit.organization}</td>
                 <td className="px-3 py-2.5 md:px-4">{unit.stagingSpot}</td>
-                <td className="px-3 py-2.5 md:px-4">{unit.crew}</td>
+                <td className="px-3 py-2.5 md:px-4">{unit.entryNumber != null ? `#${unit.entryNumber}` : "-"}</td>
                 <td className="px-3 py-2.5 md:px-4">{unit.eta}</td>
                 <td className="px-3 py-2.5 md:px-4">
                   <StatusBadge status={unit.status} />
@@ -311,19 +381,34 @@ function MissionControlUnitsPanel({ dedicated }: { dedicated: boolean }) {
 function MissionControlChatPanelWithData({
   dedicated,
   communications,
+  onStatusUpdate,
 }: {
   dedicated: boolean;
   communications?: MissionControlConsoleProps["communications"];
+  onStatusUpdate?: (entryNumber: number, status: MissionControlOperationalStatus) => void;
 }) {
   const [selectedChannel, setSelectedChannel] = useState<CommunicationsChannel>("broadcast");
   const [showCreateChannelNotice, setShowCreateChannelNotice] = useState(false);
+  const [messages, setMessages] = useState<MissionControlDbMessage[]>(communications?.messages ?? []);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const entryNumberRef = useRef<HTMLInputElement | null>(null);
 
   const dbMessages = communications?.messages ?? [];
   const hasContext = Boolean(communications?.organizationId);
-  const hasDbMessages = dbMessages.length > 0;
+  const hasDbMessages = messages.length > 0;
+  const useSampleMessages = !hasContext && !hasDbMessages;
+
+  useEffect(() => {
+    setMessages(dbMessages);
+  }, [dbMessages]);
 
   const normalizedMessages = hasDbMessages
-    ? dbMessages.map((message) => ({
+    ? messages.map((message) => ({
         id: message.id,
         senderName: message.senderName,
         senderType: message.senderType,
@@ -336,16 +421,18 @@ function MissionControlChatPanelWithData({
           minute: "2-digit",
         }),
       }))
-    : chatMessages.map((message) => ({
-        id: message.id,
-        senderName: message.senderName,
-        senderType: message.senderType,
-        channel: message.channel,
-        unitName: message.unitName,
-        entryNumber: message.entryNumber,
-        body: message.body,
-        time: message.time,
-      }));
+    : useSampleMessages
+      ? chatMessages.map((message) => ({
+          id: message.id,
+          senderName: message.senderName,
+          senderType: message.senderType,
+          channel: message.channel,
+          unitName: message.unitName,
+          entryNumber: message.entryNumber,
+          body: message.body,
+          time: message.time,
+        }))
+      : [];
 
   const filteredMessages = normalizedMessages.filter((message) => {
     if (selectedChannel === "broadcast") {
@@ -367,8 +454,116 @@ function MissionControlChatPanelWithData({
     event.currentTarget.form?.requestSubmit();
   };
 
+  useEffect(() => {
+    const list = messageListRef.current;
+    if (!list) {
+      return;
+    }
+
+    list.scrollTop = list.scrollHeight;
+  }, [selectedChannel, filteredMessages.length]);
+
+  const handleComposeSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+
+    if (!communications?.organizationId || isSending) {
+      return;
+    }
+
+    const formData = new FormData(form);
+    const messageBody = String(formData.get("messageBody") || "").trim();
+
+    if (!messageBody) {
+      return;
+    }
+
+    setIsSending(true);
+    setSendError(null);
+
+    try {
+      const response = await fetch("/api/mission-control/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          organizationId: communications.organizationId,
+          eventId: communications.eventId ?? "",
+          channel: selectedChannel,
+          senderType: "coc",
+          messageType: channelMessageType,
+          senderName: channelSenderName,
+          messageBody,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { ok: true; message: MissionControlDbMessage }
+        | { ok: false; error?: string }
+        | null;
+
+      if (!response.ok || !payload || !payload.ok) {
+        throw new Error(payload && !payload.ok && payload.error ? payload.error : "Unable to send message.");
+      }
+
+      setMessages((current) => [...current, payload.message]);
+  form.reset();
+      textareaRef.current?.focus();
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : "Unable to send message.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const applyStatusUpdate = async (status: MissionControlOperationalStatus) => {
+    if (!communications?.organizationId || !communications?.eventId || isUpdatingStatus) {
+      return;
+    }
+
+    const parsedEntryNumber = Number(entryNumberRef.current?.value || "");
+    if (!Number.isFinite(parsedEntryNumber) || parsedEntryNumber < 1) {
+      setStatusError("Enter an entry number before setting a status.");
+      return;
+    }
+
+    setStatusError(null);
+    setIsUpdatingStatus(true);
+
+    try {
+      const response = await fetch("/api/mission-control/status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          organizationId: communications.organizationId,
+          eventId: communications.eventId,
+          entryNumber: Math.trunc(parsedEntryNumber),
+          status,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { ok: true; entryNumber: number; status: MissionControlOperationalStatus }
+        | { ok: false; error?: string }
+        | null;
+
+      if (!response.ok || !payload || !payload.ok) {
+        throw new Error(payload && !payload.ok && payload.error ? payload.error : "Unable to update status.");
+      }
+
+      onStatusUpdate?.(payload.entryNumber, payload.status);
+    } catch (error) {
+      setStatusError(error instanceof Error ? error.message : "Unable to update status.");
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-800/70 bg-slate-950/85">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-800/70 bg-slate-950/85">
       <div className="shrink-0 border-b border-slate-800/70 p-2 md:px-3 md:py-2">
         <div className="flex flex-wrap items-center gap-1.5">
           {communicationChannels.map((channel) => (
@@ -401,8 +596,8 @@ function MissionControlChatPanelWithData({
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto p-2 md:px-3 md:py-2">
-        <div className="rounded-lg border border-slate-800/70 bg-slate-950 p-3">
+      <div ref={messageListRef} className="min-h-0 flex-1 overflow-auto p-2 md:px-3 md:py-2">
+        <div className="min-h-full rounded-lg border border-slate-800/70 bg-slate-950 p-3">
           {filteredMessages.length > 0 ? (
             filteredMessages.map((message, index) => {
               const titleParts = [
@@ -423,42 +618,89 @@ function MissionControlChatPanelWithData({
               );
             })
           ) : (
-            <p className="text-sm text-slate-400">No messages in this channel.</p>
+            <p className="text-sm text-slate-400">
+              {hasContext && !hasDbMessages ? "No messages yet." : "No messages in this channel."}
+            </p>
           )}
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-slate-800/70 p-1.5 md:px-2 md:py-1.5">
-        {hasContext && communications?.sendMessageAction ? (
-          <form action={communications.sendMessageAction} className="rounded-md border border-slate-800/70 bg-slate-950 p-1.5">
-            <input type="hidden" name="organizationId" value={communications.organizationId} />
-            <input type="hidden" name="eventId" value={communications.eventId ?? ""} />
+      <div className="sticky bottom-0 shrink-0 border-t border-slate-800/70 bg-slate-950/95 p-1.5 backdrop-blur md:px-2 md:py-1.5">
+        {hasContext ? (
+          <form onSubmit={handleComposeSubmit} className="rounded-md border border-slate-800/70 bg-slate-950 p-1.5">
+            <input type="hidden" name="organizationId" value={communications?.organizationId ?? ""} />
+            <input type="hidden" name="eventId" value={communications?.eventId ?? ""} />
             <input type="hidden" name="channel" value={selectedChannel} />
             <input type="hidden" name="senderType" value="coc" />
             <input type="hidden" name="messageType" value={channelMessageType} />
             <input type="hidden" name="senderName" value={channelSenderName} />
 
+            <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+              <input
+                ref={entryNumberRef}
+                name="entryNumber"
+                type="number"
+                min={1}
+                placeholder="Entry #"
+                className="h-8 min-h-8 w-24 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs leading-5 text-white"
+                disabled={isUpdatingStatus}
+              />
+              <button
+                type="button"
+                onClick={() => applyStatusUpdate("ready")}
+                className="inline-flex h-8 min-h-8 items-center rounded-md border border-green-500 bg-green-600/20 px-2.5 text-xs font-semibold text-green-200 transition hover:bg-green-600/35"
+                disabled={isUpdatingStatus}
+              >
+                Green / Ready
+              </button>
+              <button
+                type="button"
+                onClick={() => applyStatusUpdate("getting_ready")}
+                className="inline-flex h-8 min-h-8 items-center rounded-md border border-yellow-500 bg-yellow-600/20 px-2.5 text-xs font-semibold text-yellow-200 transition hover:bg-yellow-600/35"
+                disabled={isUpdatingStatus}
+              >
+                Yellow / Getting Ready
+              </button>
+              <button
+                type="button"
+                onClick={() => applyStatusUpdate("needs_assistance")}
+                className="inline-flex h-8 min-h-8 items-center rounded-md border border-red-500 bg-red-600/20 px-2.5 text-xs font-semibold text-red-200 transition hover:bg-red-600/35"
+                disabled={isUpdatingStatus}
+              >
+                Red / Need Assistance
+              </button>
+            </div>
+
             <div className="flex items-center gap-1.5">
               <textarea
+                ref={textareaRef}
                 name="messageBody"
                 rows={1}
                 placeholder="Send a message"
                 onKeyDown={handleComposeKeyDown}
                 className="h-8 min-h-8 flex-1 resize-none rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm leading-5 text-white"
+                disabled={isSending}
                 required
               />
 
               <button
                 type="submit"
                 className="inline-flex h-8 min-h-8 items-center rounded-md border border-blue-400 bg-blue-500 px-3 text-xs font-semibold text-white transition hover:bg-blue-400"
+                disabled={isSending}
               >
-                Send
+                {isSending ? "Sending" : "Send"}
               </button>
             </div>
           </form>
         ) : null}
 
-        {!hasDbMessages ? (
+        {sendError ? (
+          <p className="mt-2 text-xs text-red-300">{sendError}</p>
+        ) : null}
+
+        {statusError ? <p className="mt-2 text-xs text-red-300">{statusError}</p> : null}
+
+        {useSampleMessages ? (
           <div className="mt-3 rounded-lg border border-slate-800/70 bg-slate-900/60 p-3 text-sm text-slate-400">
             Sample fallback only when event/organization communications context is unavailable.
           </div>
@@ -502,7 +744,8 @@ function renderPanel(
     liveMapEditBasePath?: string;
     activeParadeLabel?: string;
   },
-  communications?: MissionControlConsoleProps["communications"]
+  communications?: MissionControlConsoleProps["communications"],
+  onStatusUpdate?: (entryNumber: number, status: MissionControlOperationalStatus) => void
 ) {
   switch (key) {
     case "map":
@@ -515,9 +758,15 @@ function renderPanel(
         />
       );
     case "units":
-      return <MissionControlUnitsPanel dedicated={dedicated} />;
+      return <MissionControlUnitsPanel dedicated={dedicated} liveMapSpots={mapProps.liveMapSpots} />;
     case "chat":
-      return <MissionControlChatPanelWithData dedicated={dedicated} communications={communications} />;
+      return (
+        <MissionControlChatPanelWithData
+          dedicated={dedicated}
+          communications={communications}
+          onStatusUpdate={onStatusUpdate}
+        />
+      );
     case "queue":
       return <MissionControlQueuePanel dedicated={dedicated} />;
   }
@@ -532,6 +781,7 @@ function MissionControlPanelShell({
   liveMapEditBasePath,
   activeParadeLabel,
   communications,
+  onStatusUpdate,
 }: {
   panel: MissionControlPanelKey;
   dedicated: boolean;
@@ -541,6 +791,7 @@ function MissionControlPanelShell({
   liveMapEditBasePath?: string;
   activeParadeLabel?: string;
   communications?: MissionControlConsoleProps["communications"];
+  onStatusUpdate?: (entryNumber: number, status: MissionControlOperationalStatus) => void;
 }) {
   const panelMeta: Record<MissionControlPanelKey, { title: string; icon: string }> = {
     map: { icon: "🗺", title: "Live Map" },
@@ -589,7 +840,7 @@ function MissionControlPanelShell({
           liveMapSpots: liveMapSpots ?? [],
           liveMapEditBasePath,
           activeParadeLabel,
-        }, communications)}
+        }, communications, onStatusUpdate)}
       </div>
     </section>
   );
@@ -602,6 +853,7 @@ export function MissionControlConsole({
   activeParadeLabel,
   communications,
 }: MissionControlConsoleProps) {
+  const [runtimeSpots, setRuntimeSpots] = useState<MissionControlMapSpot[]>(liveMapSpots);
   const [expandedPanel, setExpandedPanel] = useState<MissionControlPanelKey | null>(null);
   const [leftPanePercent, setLeftPanePercent] = useState(65);
   const [topPaneHeight, setTopPaneHeight] = useState(460);
@@ -611,6 +863,29 @@ export function MissionControlConsole({
   const unitsPaneRef = useRef<HTMLDivElement | null>(null);
   const isCombined = view === "combined";
   const focusedPanel = isCombined ? null : view;
+
+  useEffect(() => {
+    setRuntimeSpots(liveMapSpots);
+  }, [liveMapSpots]);
+
+  const handleStatusUpdate = (entryNumber: number, status: MissionControlOperationalStatus) => {
+    setRuntimeSpots((current) =>
+      current.map((spot) => {
+        if (!Array.isArray(spot.entries) || spot.entries.length === 0) {
+          return spot;
+        }
+
+        const updatedEntries = spot.entries.map((entry) =>
+          entry.parade_number === entryNumber ? { ...entry, check_in_status: status } : entry
+        );
+
+        return {
+          ...spot,
+          entries: updatedEntries,
+        };
+      })
+    );
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -730,9 +1005,10 @@ export function MissionControlConsole({
                 dedicated={false}
                 onFullScreen={setExpandedPanel}
                 active={expandedPanel === "map"}
-                liveMapSpots={liveMapSpots}
+                liveMapSpots={runtimeSpots}
                 liveMapEditBasePath={liveMapEditBasePath}
                 activeParadeLabel={activeParadeLabel}
+                onStatusUpdate={handleStatusUpdate}
               />
 
               <MissionControlPanelShell
@@ -741,6 +1017,7 @@ export function MissionControlConsole({
                 onFullScreen={setExpandedPanel}
                 active={expandedPanel === "chat"}
                 communications={communications}
+                onStatusUpdate={handleStatusUpdate}
               />
             </div>
 
@@ -749,6 +1026,8 @@ export function MissionControlConsole({
               dedicated={false}
               onFullScreen={setExpandedPanel}
               active={expandedPanel === "units"}
+              liveMapSpots={runtimeSpots}
+              onStatusUpdate={handleStatusUpdate}
             />
           </div>
 
@@ -769,9 +1048,10 @@ export function MissionControlConsole({
                 dedicated={false}
                 onFullScreen={setExpandedPanel}
                 active={expandedPanel === "map"}
-                liveMapSpots={liveMapSpots}
+                liveMapSpots={runtimeSpots}
                 liveMapEditBasePath={liveMapEditBasePath}
                 activeParadeLabel={activeParadeLabel}
+                onStatusUpdate={handleStatusUpdate}
               />
             </div>
 
@@ -789,6 +1069,7 @@ export function MissionControlConsole({
                 onFullScreen={setExpandedPanel}
                 active={expandedPanel === "chat"}
                 communications={communications}
+                onStatusUpdate={handleStatusUpdate}
               />
             </div>
 
@@ -807,6 +1088,8 @@ export function MissionControlConsole({
                     dedicated={false}
                     onFullScreen={setExpandedPanel}
                     active={expandedPanel === "units"}
+                    liveMapSpots={runtimeSpots}
+                    onStatusUpdate={handleStatusUpdate}
                   />
                 </div>
 
@@ -821,17 +1104,18 @@ export function MissionControlConsole({
           </div>
         </div>
       ) : focusedPanel ? (
-        <div className="min-h-[calc(100dvh-6.25rem)]">
-          <div className="h-full min-h-0">
+        <div className="h-[calc(100dvh-6.25rem)] min-h-0">
+          <div className="h-full min-h-0 overflow-hidden">
             <MissionControlPanelShell
               panel={focusedPanel}
               dedicated
               onFullScreen={setExpandedPanel}
               active={expandedPanel === focusedPanel}
-              liveMapSpots={liveMapSpots}
+              liveMapSpots={runtimeSpots}
               liveMapEditBasePath={liveMapEditBasePath}
               activeParadeLabel={activeParadeLabel}
               communications={communications}
+              onStatusUpdate={handleStatusUpdate}
             />
           </div>
         </div>
@@ -846,11 +1130,19 @@ export function MissionControlConsole({
               </Button>
             </div>
             <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-800/70 bg-slate-950 shadow-2xl shadow-slate-950/70">
-              {renderPanel(expandedPanel, true, {
-                liveMapSpots,
-                liveMapEditBasePath,
-                activeParadeLabel,
-              }, communications)}
+              <div className="h-full min-h-0 overflow-hidden p-1">
+                <MissionControlPanelShell
+                  panel={expandedPanel}
+                  dedicated
+                  onFullScreen={setExpandedPanel}
+                  active
+                  liveMapSpots={runtimeSpots}
+                  liveMapEditBasePath={liveMapEditBasePath}
+                  activeParadeLabel={activeParadeLabel}
+                  communications={communications}
+                  onStatusUpdate={handleStatusUpdate}
+                />
+              </div>
             </div>
           </div>
         </div>

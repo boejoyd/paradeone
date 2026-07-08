@@ -1,10 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { supabase } from "@/lib/supabase";
+import { requireOrganizationRole } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function deleteOrganization(formData: FormData) {
   const organizationId = String(formData.get("organizationId") || "");
+
+  await requireOrganizationRole(organizationId, ["owner"]);
+  const supabase = await createServerSupabaseClient();
 
   const { error } = await supabase
     .from("organizations")

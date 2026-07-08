@@ -6,26 +6,21 @@ import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
+import { listAccessibleOrganizations } from "@/lib/organizations/access";
 
 export default async function OrganizationsPage() {
-  const { data: organizations, error } = await supabase
-    .from("organizations")
-    .select("id, name, slug, created_at")
-    .order("created_at", { ascending: false });
-
-  if (error) throw new Error(error.message);
+  const organizations = await listAccessibleOrganizations();
 
   return (
     <AppShell>
       <Breadcrumbs
-        items={[{ label: "Home", href: "/" }, { label: "Organizations" }]}
+        items={[{ label: "Home", href: "/" }, { label: "Parade Setup" }]}
       />
 
       <PageHeader
         eyebrow="Workspaces"
-        title="Organizations"
-        description="Manage the organizations that operate one or more parades."
+        title="Parade Setup"
+        description="Manage the parade setups that operate one or more parades."
         actions={
           <ActionBar>
             <Link href="/create-parade">
@@ -35,7 +30,7 @@ export default async function OrganizationsPage() {
         }
       />
 
-      <Card title="Organizations">
+      <Card title="Parade Setup">
         {organizations && organizations.length > 0 ? (
           <div className="mt-6 grid gap-4">
             {organizations.map((organization) => (
@@ -60,8 +55,8 @@ export default async function OrganizationsPage() {
           </div>
         ) : (
           <EmptyState
-            title="No organizations yet"
-            description="Create your first organization to begin managing parades, entries, staging, and operations."
+            title="No parade setups yet"
+            description="Create your first parade setup to begin managing parades, entries, staging, and operations."
             actionHref="/create-parade"
             actionLabel="Create Parade"
           />

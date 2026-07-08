@@ -1,8 +1,43 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireOrganizationRole } from "@/lib/auth";
+import { addOrInviteOrganizationMember } from "@/lib/organizations/memberships";
+import { requireOrganizationRole, requireUser, type OrganizationRole } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+
+function parseRole(value: FormDataEntryValue | null): OrganizationRole {
+  const role = String(value || "").trim();
+
+  if (role === "owner" || role === "admin" || role === "staff" || role === "volunteer") {
+    return role;
+  }
+
+  return "volunteer";
+}
+
+export async function addOrganizationMemberOrInvite(formData: FormData) {
+  const organizationId = String(formData.get("organizationId") || "").trim();
+  const organizationSlug = String(formData.get("organizationSlug") || "").trim();
+  const email = String(formData.get("email") || "").trim();
+  const role = parseRole(formData.get("role"));
+
+  if (!organizationId || !organizationSlug || !email) {
+    throw new Error("Organization, role, and email are required.");
+  }
+
+  const user = await requireUser();
+  await requireOrganizationRole(organizationId, ["owner", "admin"]);
+
+  await addOrInviteOrganizationMember({
+    organizationId,
+    email,
+    role,
+    invitedByUserId: user.id,
+  });
+
+  revalidatePath(`/organizations/${organizationSlug}/settings`);
+}
 
 type DestructiveActionInput = {
   organizationId: string;

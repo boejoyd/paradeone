@@ -1,12 +1,26 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { requireOrganizationRole } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function updateStagingSpot(formData: FormData) {
   const slug = String(formData.get("slug") || "");
   const eventId = String(formData.get("eventId") || "");
   const spotId = String(formData.get("spotId") || "");
+  const supabase = await createServerSupabaseClient();
+
+  const { data: event, error: eventError } = await supabase
+    .from("events")
+    .select("organization_id")
+    .eq("id", eventId)
+    .single();
+
+  if (eventError || !event?.organization_id) {
+    throw new Error(eventError?.message || "Parade not found.");
+  }
+
+  await requireOrganizationRole(event.organization_id, ["owner", "admin", "staff"]);
 
   const { error } = await supabase
     .from("staging_spots")
@@ -32,6 +46,19 @@ export async function deleteStagingSpot(formData: FormData) {
   const slug = String(formData.get("slug") || "");
   const eventId = String(formData.get("eventId") || "");
   const spotId = String(formData.get("spotId") || "");
+  const supabase = await createServerSupabaseClient();
+
+  const { data: event, error: eventError } = await supabase
+    .from("events")
+    .select("organization_id")
+    .eq("id", eventId)
+    .single();
+
+  if (eventError || !event?.organization_id) {
+    throw new Error(eventError?.message || "Parade not found.");
+  }
+
+  await requireOrganizationRole(event.organization_id, ["owner", "admin", "staff"]);
 
   const { error } = await supabase
     .from("staging_spots")

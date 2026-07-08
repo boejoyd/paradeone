@@ -3,7 +3,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
+import { requireAccessibleOrganizationBySlug } from "@/lib/organizations/access";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type OrganizationPageProps = {
   params: Promise<{
@@ -16,13 +17,8 @@ export default async function OrganizationPage({
 }: OrganizationPageProps) {
   const { slug } = await params;
 
-  const { data: organization, error } = await supabase
-    .from("organizations")
-    .select("id, name, slug, created_at")
-    .eq("slug", slug)
-    .single();
-
-  if (error) throw new Error(error.message);
+  const organization = await requireAccessibleOrganizationBySlug(slug);
+  const supabase = await createServerSupabaseClient();
 
   const { data: events } = await supabase
     .from("events")
@@ -35,7 +31,7 @@ export default async function OrganizationPage({
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },
-          { label: "Organizations", href: "/organizations" },
+          { label: "Parade Setup", href: "/organizations" },
           { label: organization.name },
         ]}
       />
@@ -43,7 +39,7 @@ export default async function OrganizationPage({
       <div className="mb-10 flex items-start justify-between gap-8">
         <div>
           <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
-            Organization
+            Parade Setup
           </p>
           <h2 className="mt-4 text-5xl font-bold tracking-tight">
             {organization.name}

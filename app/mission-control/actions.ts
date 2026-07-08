@@ -1,8 +1,14 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { requireOrganizationAccess, requireUser } from "@/lib/auth";
 import { sendMissionControlMessage } from "@/lib/mission-control/communications";
+
+export type SendMissionControlChatMessageState = {
+  status: "idle" | "success" | "error";
+  message: string | null;
+  submissionId: number;
+};
 
 function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
   const raw = String(value || "").trim();
@@ -64,36 +70,58 @@ function parseMessageType(value: FormDataEntryValue | null): "chat" | "status" |
   return "chat";
 }
 
-export async function sendMissionControlChatMessageAction(formData: FormData) {
+export async function sendMissionControlChatMessageAction(
+  _previousState: SendMissionControlChatMessageState,
+  formData: FormData
+): Promise<SendMissionControlChatMessageState> {
   const organizationId = String(formData.get("organizationId") || "").trim();
   const eventId = String(formData.get("eventId") || "").trim();
 
   if (!organizationId) {
-    throw new Error("Organization context is required.");
+    return {
+      status: "error",
+      message: "Organization context is required.",
+      submissionId: Date.now(),
+    };
   }
 
-  await requireOrganizationAccess(organizationId);
-  const user = await requireUser();
+  try {
+    await requireOrganizationAccess(organizationId);
+    const user = await requireUser();
 
-  const senderType = parseSenderType(formData.get("senderType"));
-  const channel = parseChannel(formData.get("channel"));
-  const messageType = parseMessageType(formData.get("messageType"));
+    const senderType = parseSenderType(formData.get("senderType"));
+    const channel = parseChannel(formData.get("channel"));
+    const messageType = parseMessageType(formData.get("messageType"));
 
-  await sendMissionControlMessage({
-    organizationId,
-    eventId: eventId || null,
-    senderUserId: user.id,
-    senderType,
-    channel,
-    senderName: String(formData.get("senderName") || "").trim(),
-    senderRole: "COC",
-    unitName: String(formData.get("unitName") || "").trim() || null,
-    entryNumber: parseOptionalNumber(formData.get("entryNumber")),
-    messageBody: String(formData.get("messageBody") || "").trim(),
-    messageType,
-    source: "app",
-    direction: "outbound",
-  });
+    await sendMissionControlMessage({
+      organizationId,
+      eventId: eventId || null,
+      senderUserId: user.id,
+      senderType,
+      channel,
+      senderName: String(formData.get("senderName") || "").trim(),
+      senderRole: "COC",
+      unitName: String(formData.get("unitName") || "").trim() || null,
+      entryNumber: parseOptionalNumber(formData.get("entryNumber")),
+      messageBody: String(formData.get("messageBody") || "").trim(),
+      messageType,
+      source: "app",
+      direction: "outbound",
+    });
 
-  redirect("/#chat");
+    revalidatePath("/");
+    revalidatePath("/mission-control/chat");
+
+    return {
+      status: "success",
+      message: null,
+      submissionId: Date.now(),
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to send message.",
+      submissionId: Date.now(),
+    };
+  }
 }

@@ -2,7 +2,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
+import { requireAccessibleEventContext } from "@/lib/organizations/access";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { updateEntry } from "./actions";
 
 type EditEntryPageProps = {
@@ -16,17 +17,8 @@ type EditEntryPageProps = {
 export default async function EditEntryPage({ params }: EditEntryPageProps) {
   const { slug, eventId, entryId } = await params;
 
-  const { data: organization } = await supabase
-    .from("organizations")
-    .select("name")
-    .eq("slug", slug)
-    .single();
-
-  const { data: event } = await supabase
-    .from("events")
-    .select("name")
-    .eq("id", eventId)
-    .single();
+  const { organization, event } = await requireAccessibleEventContext(slug, eventId);
+  const supabase = await createServerSupabaseClient();
 
   const { data: entry, error } = await supabase
     .from("entries")
@@ -49,7 +41,7 @@ export default async function EditEntryPage({ params }: EditEntryPageProps) {
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },
-          { label: "Organizations", href: "/organizations" },
+          { label: "Parade Setup", href: "/organizations" },
           { label: organization?.name || "Organization", href: `/organizations/${slug}` },
           { label: event?.name || "Parade", href: `/organizations/${slug}/parades/${eventId}` },
           { label: "Entries", href: `/organizations/${slug}/parades/${eventId}/entries` },

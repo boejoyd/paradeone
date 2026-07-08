@@ -4,7 +4,8 @@ import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { supabase } from "@/lib/supabase";
+import { requireAccessibleEventContext } from "@/lib/organizations/access";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { autoNumberLineup } from "./actions";
 
 type LineupPageProps = {
@@ -17,17 +18,8 @@ type LineupPageProps = {
 export default async function LineupPage({ params }: LineupPageProps) {
   const { slug, eventId } = await params;
 
-  const { data: organization } = await supabase
-    .from("organizations")
-    .select("name, slug")
-    .eq("slug", slug)
-    .single();
-
-  const { data: event } = await supabase
-    .from("events")
-    .select("name")
-    .eq("id", eventId)
-    .single();
+  const { organization, event } = await requireAccessibleEventContext(slug, eventId);
+  const supabase = await createServerSupabaseClient();
 
   const { data: entries, error } = await supabase
     .from("entries")
@@ -45,7 +37,7 @@ export default async function LineupPage({ params }: LineupPageProps) {
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },
-          { label: "Organizations", href: "/organizations" },
+          { label: "Parade Setup", href: "/organizations" },
           {
             label: organization?.name || "Organization",
             href: `/organizations/${slug}`,

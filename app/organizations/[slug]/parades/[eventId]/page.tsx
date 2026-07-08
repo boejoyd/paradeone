@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { requireAccessibleEventContext } from "@/lib/organizations/access";
 import { listMissionControlMessages } from "@/lib/mission-control/communications";
-import { supabase } from "@/lib/supabase";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { sendMissionControlMessageAction } from "./actions";
 
 type ParadePageProps = {
@@ -21,13 +22,8 @@ type ParadePageProps = {
 export default async function ParadePage({ params }: ParadePageProps) {
   const { slug, eventId } = await params;
 
-  const { data: organization, error: organizationError } = await supabase
-    .from("organizations")
-    .select("id, name, slug")
-    .eq("slug", slug)
-    .single();
-
-  if (organizationError) throw new Error(organizationError.message);
+  const { organization } = await requireAccessibleEventContext(slug, eventId);
+  const supabase = await createServerSupabaseClient();
 
   const { data: event, error: eventError } = await supabase
     .from("events")
@@ -69,7 +65,7 @@ export default async function ParadePage({ params }: ParadePageProps) {
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },
-          { label: "Organizations", href: "/organizations" },
+          { label: "Parade Setup", href: "/organizations" },
           {
             label: organization.name,
             href: `/organizations/${organization.slug}`,

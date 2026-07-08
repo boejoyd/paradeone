@@ -10,6 +10,14 @@ function isPublicPath(pathname: string) {
     return true;
   }
 
+  if (
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
+    pathname === "/sms-terms"
+  ) {
+    return true;
+  }
+
   if (pathname.startsWith("/auth")) {
     return true;
   }

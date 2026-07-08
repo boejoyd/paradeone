@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/AppShell";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { MissionControlConsole } from "@/components/parades/MissionControlConsole";
 import { getMissionControlMapData } from "@/lib/data/missionControl";
 import { listMissionControlMessages } from "@/lib/mission-control/communications";
@@ -26,6 +27,20 @@ function toUiChannel(channel: string | null | undefined): "broadcast" | "parade_
 
 export default async function Home() {
   const mapData = await getMissionControlMapData();
+
+  if (!mapData.hasOrganizationMembership) {
+    return (
+      <AppShell>
+        <EmptyState
+          title="No organization access"
+          description="Create an organization or ask an owner to invite you."
+          actionHref="/create-parade"
+          actionLabel="Create Your First Parade"
+        />
+      </AppShell>
+    );
+  }
+
   const messages =
     mapData.organizationId && mapData.eventId
       ? await listMissionControlMessages({

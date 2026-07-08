@@ -28,6 +28,28 @@ function formatStatus(status: string | null | undefined) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function toOperationalStatus(
+  status: string | null | undefined
+): "ready" | "getting_ready" | "needs_assistance" | "not_checked_in" {
+  if (!status) {
+    return "not_checked_in";
+  }
+
+  if (status === "ready" || status === "checked_in") {
+    return "ready";
+  }
+
+  if (status === "getting_ready" || status === "staging" || status === "queued") {
+    return "getting_ready";
+  }
+
+  if (status === "needs_assistance") {
+    return "needs_assistance";
+  }
+
+  return "not_checked_in";
+}
+
 function highlightSpotCard(spotId: string) {
   const card = document.getElementById(`spot-${spotId}`);
 
@@ -96,17 +118,18 @@ export function LiveStagingMap({
       const assignedEntry = Array.isArray(spot.entries)
         ? spot.entries[0]
         : null;
-
-      const isCheckedIn = assignedEntry?.check_in_status === "checked_in";
+      const operationalStatus = toOperationalStatus(assignedEntry?.check_in_status);
 
       const markerEl = document.createElement("div");
       markerEl.className = [
-        "flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-lg",
-        isCheckedIn
-          ? "bg-green-600"
-          : assignedEntry
-            ? "bg-yellow-600"
-            : "bg-slate-600",
+        "flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 text-xs font-bold text-white shadow-lg transition-transform",
+        operationalStatus === "ready"
+          ? "border-green-200 bg-green-600"
+          : operationalStatus === "getting_ready"
+            ? "border-yellow-200 bg-yellow-600"
+            : operationalStatus === "needs_assistance"
+              ? "h-12 w-12 border-red-100 bg-red-600 ring-4 ring-red-500/60"
+              : "border-slate-200 bg-slate-600",
       ].join(" ");
       markerEl.textContent = spot.spot_code;
 

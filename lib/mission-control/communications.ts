@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requireOrganizationAccess } from "@/lib/auth";
 
 export type MissionControlSenderType =
   | "coc"
@@ -134,6 +135,7 @@ function parseChannel(value: string | null | undefined): MissionControlChannel {
 export async function listMissionControlMessages(
   input: ListMissionControlMessagesInput
 ): Promise<MissionControlMessage[]> {
+  await requireOrganizationAccess(input.organizationId);
   const supabase = await createServerSupabaseClient();
 
   let query = supabase

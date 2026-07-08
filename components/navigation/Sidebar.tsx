@@ -6,7 +6,7 @@ import { useState } from "react";
 import { signOut } from "@/app/login/actions";
 
 const navItems = [
-  { label: "Organizations", href: "/organizations" },
+  { label: "Parade Setup", href: "/organizations" },
   { label: "Settings", href: "/settings" },
 ];
 

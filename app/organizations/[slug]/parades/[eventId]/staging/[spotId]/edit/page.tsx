@@ -2,7 +2,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
+import { requireAccessibleEventContext } from "@/lib/organizations/access";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { updateStagingSpot, deleteStagingSpot } from "./actions";
 
 type EditStagingSpotPageProps = {
@@ -18,6 +19,9 @@ export default async function EditStagingSpotPage({
 }: EditStagingSpotPageProps) {
   const { slug, eventId, spotId } = await params;
 
+  await requireAccessibleEventContext(slug, eventId);
+  const supabase = await createServerSupabaseClient();
+
   const { data: spot, error } = await supabase
     .from("staging_spots")
     .select("*")
@@ -32,7 +36,7 @@ export default async function EditStagingSpotPage({
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },
-          { label: "Organizations", href: "/organizations" },
+          { label: "Parade Setup", href: "/organizations" },
           { label: "Staging", href: `/organizations/${slug}/parades/${eventId}/staging` },
           { label: spot.spot_code },
           { label: "Edit" },
