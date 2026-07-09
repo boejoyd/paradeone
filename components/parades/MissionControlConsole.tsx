@@ -171,22 +171,6 @@ function toOperationalStatus(status: string | null | undefined): MissionControlO
   return "not_checked_in";
 }
 
-function unitRowTone(status: MissionControlOperationalStatus): string {
-  if (status === "needs_assistance") {
-    return "bg-red-950/45 ring-1 ring-inset ring-red-700/60";
-  }
-
-  if (status === "ready") {
-    return "bg-green-950/25";
-  }
-
-  if (status === "getting_ready") {
-    return "bg-yellow-950/25";
-  }
-
-  return "bg-slate-950/20";
-}
-
 const chatMessages: ChatMessage[] = [
   {
     id: "chat-1",
@@ -360,7 +344,7 @@ function MissionControlUnitsPanel({
           </thead>
           <tbody className="divide-y divide-slate-800/70 text-slate-300">
             {units.map((unit) => (
-              <tr key={unit.id} className={["align-top", unitRowTone(unit.status)].join(" ")}>
+              <tr key={unit.id} className="align-top bg-slate-950/20">
                 <td className="px-3 py-2.5 font-semibold text-white md:px-4">{unit.name}</td>
                 <td className="px-3 py-2.5 md:px-4">{unit.organization}</td>
                 <td className="px-3 py-2.5 md:px-4">{unit.stagingSpot}</td>

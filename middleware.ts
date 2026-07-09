@@ -26,6 +26,10 @@ function isPublicPath(pathname: string) {
     return true;
   }
 
+  if (pathname.startsWith("/participant/")) {
+    return true;
+  }
+
   return /\.[^/]+$/.test(pathname);
 }
 
