@@ -335,7 +335,7 @@ function MissionControlUnitsPanel({
           <thead className="sticky top-0 bg-slate-950/95 text-slate-300 backdrop-blur">
             <tr>
               <th className="px-3 py-2.5 font-medium md:px-4">Unit</th>
-              <th className="px-3 py-2.5 font-medium md:px-4">Organization</th>
+              <th className="px-3 py-2.5 font-medium md:px-4">Section</th>
               <th className="px-3 py-2.5 font-medium md:px-4">Staging</th>
               <th className="px-3 py-2.5 font-medium md:px-4">Entry #</th>
               <th className="px-3 py-2.5 font-medium md:px-4">ETA</th>
