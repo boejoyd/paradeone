@@ -500,7 +500,9 @@ function MissionControlChatPanelWithData({
 }) {
   const [selectedChannel, setSelectedChannel] = useState<CommunicationsChannel>("broadcast");
   const [showCreateChannelNotice, setShowCreateChannelNotice] = useState(false);
-  const [messages, setMessages] = useState<MissionControlDbMessage[]>(communications?.messages ?? []);
+  const incomingMessages = communications?.messages;
+  const [messages, setMessages] = useState<MissionControlDbMessage[]>(incomingMessages ?? []);
+  const [previousIncomingMessages, setPreviousIncomingMessages] = useState(incomingMessages);
   const [sendError, setSendError] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -509,14 +511,14 @@ function MissionControlChatPanelWithData({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const entryNumberRef = useRef<HTMLInputElement | null>(null);
 
-  const dbMessages = communications?.messages ?? [];
   const hasContext = Boolean(communications?.organizationId);
   const hasDbMessages = messages.length > 0;
   const useSampleMessages = !hasContext && !hasDbMessages;
 
-  useEffect(() => {
-    setMessages(dbMessages);
-  }, [dbMessages]);
+  if (previousIncomingMessages !== incomingMessages) {
+    setPreviousIncomingMessages(incomingMessages);
+    setMessages(incomingMessages ?? []);
+  }
 
   const normalizedMessages = hasDbMessages
     ? messages.map((message) => ({
@@ -992,6 +994,7 @@ export function MissionControlConsole({
   communications,
 }: MissionControlConsoleProps) {
   const [runtimeSpots, setRuntimeSpots] = useState<MissionControlMapSpot[]>(liveMapSpots);
+  const [previousLiveMapSpots, setPreviousLiveMapSpots] = useState(liveMapSpots);
   const [expandedPanel, setExpandedPanel] = useState<MissionControlPanelKey | null>(null);
   const [leftPanePercent, setLeftPanePercent] = useState(65);
   const [topPaneHeight, setTopPaneHeight] = useState(460);
@@ -1004,9 +1007,10 @@ export function MissionControlConsole({
   const statusOrganizationId = statusContext?.organizationId ?? communications?.organizationId;
   const statusEventId = statusContext?.eventId ?? communications?.eventId;
 
-  useEffect(() => {
+  if (previousLiveMapSpots !== liveMapSpots) {
+    setPreviousLiveMapSpots(liveMapSpots);
     setRuntimeSpots(liveMapSpots);
-  }, [liveMapSpots]);
+  }
 
   useEffect(() => {
     if (!statusOrganizationId || !statusEventId) {
@@ -1130,36 +1134,38 @@ export function MissionControlConsole({
       return;
     }
 
-    const raw = window.localStorage.getItem(WORKSPACE_SPLIT_STORAGE_KEY);
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as {
-        leftPanePercent?: number;
-        topPaneHeight?: number;
-        unitsPaneMinHeight?: number;
-        topPanePercent?: number;
-      };
-
-      if (typeof parsed.leftPanePercent === "number") {
-        setLeftPanePercent(Math.min(75, Math.max(35, parsed.leftPanePercent)));
+    queueMicrotask(() => {
+      const raw = window.localStorage.getItem(WORKSPACE_SPLIT_STORAGE_KEY);
+      if (!raw) {
+        return;
       }
 
-      if (typeof parsed.topPaneHeight === "number") {
-        setTopPaneHeight(Math.min(1400, Math.max(280, parsed.topPaneHeight)));
-      } else if (typeof parsed.topPanePercent === "number") {
-        const fallbackHeight = (parsed.topPanePercent / 100) * Math.max(window.innerHeight - 220, 420);
-        setTopPaneHeight(Math.min(1400, Math.max(280, fallbackHeight)));
-      }
+      try {
+        const parsed = JSON.parse(raw) as {
+          leftPanePercent?: number;
+          topPaneHeight?: number;
+          unitsPaneMinHeight?: number;
+          topPanePercent?: number;
+        };
 
-      if (typeof parsed.unitsPaneMinHeight === "number") {
-        setUnitsPaneMinHeight(Math.min(1800, Math.max(220, parsed.unitsPaneMinHeight)));
+        if (typeof parsed.leftPanePercent === "number") {
+          setLeftPanePercent(Math.min(75, Math.max(35, parsed.leftPanePercent)));
+        }
+
+        if (typeof parsed.topPaneHeight === "number") {
+          setTopPaneHeight(Math.min(1400, Math.max(280, parsed.topPaneHeight)));
+        } else if (typeof parsed.topPanePercent === "number") {
+          const fallbackHeight = (parsed.topPanePercent / 100) * Math.max(window.innerHeight - 220, 420);
+          setTopPaneHeight(Math.min(1400, Math.max(280, fallbackHeight)));
+        }
+
+        if (typeof parsed.unitsPaneMinHeight === "number") {
+          setUnitsPaneMinHeight(Math.min(1800, Math.max(220, parsed.unitsPaneMinHeight)));
+        }
+      } catch {
+        // Ignore malformed persisted values.
       }
-    } catch {
-      // Ignore malformed persisted values.
-    }
+    });
   }, []);
 
   useEffect(() => {

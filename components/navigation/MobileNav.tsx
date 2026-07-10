@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { signOut } from "@/app/login/actions";
 
 const navItems = [
@@ -49,15 +49,10 @@ export function MobileNav({ userEmail }: MobileNavProps) {
 
   const commandContext = useMemo(() => getCommandContext(pathname), [pathname]);
 
-  useEffect(() => {
+  const closeMenus = () => {
     setOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (!open) {
-      setUserMenuOpen(false);
-    }
-  }, [open]);
+    setUserMenuOpen(false);
+  };
 
   return (
     <>
@@ -66,7 +61,14 @@ export function MobileNav({ userEmail }: MobileNavProps) {
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
-              onClick={() => setOpen((prev) => !prev)}
+              onClick={() => {
+                if (open) {
+                  closeMenus();
+                  return;
+                }
+
+                setOpen(true);
+              }}
               className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-700 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-900"
               aria-label={open ? "Close navigation drawer" : "Open navigation drawer"}
               aria-expanded={open}
@@ -105,7 +107,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
         </div>
       </header>
 
-      {open ? <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setOpen(false)} aria-hidden="true" /> : null}
+      {open ? <div className="fixed inset-0 z-40 bg-black/40" onClick={closeMenus} aria-hidden="true" /> : null}
 
       <aside
         className={[
@@ -118,7 +120,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
           <p className="text-xs font-black uppercase tracking-[0.35em] text-white">PARADEONE</p>
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={closeMenus}
             className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-200 transition hover:border-slate-500 hover:bg-slate-900"
             aria-label="Close navigation drawer"
           >
@@ -134,7 +136,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setOpen(false)}
+                onClick={closeMenus}
                 className={[
                   "rounded-md px-3 py-2 text-sm font-medium transition",
                   active ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-900 hover:text-white",
