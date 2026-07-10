@@ -584,17 +584,22 @@ function MissionControlChatPanelWithData({
         <div className="min-h-full rounded-lg border border-slate-800/70 bg-slate-950 p-3">
           {filteredMessages.length > 0 ? (
             filteredMessages.map((message, index) => {
-              const titleParts = [
-                message.senderName,
-                message.unitName,
-                message.entryNumber != null ? `#${message.entryNumber}` : null,
-              ].filter((value): value is string => Boolean(value));
+              const senderIdentity =
+                message.entryNumber != null && message.unitName
+                  ? `Float #${message.entryNumber} · ${message.unitName}`
+                  : message.entryNumber != null
+                    ? `Float #${message.entryNumber}`
+                    : message.unitName
+                      ? message.unitName
+                      : message.senderName;
 
               return (
                 <div key={message.id} className="py-1.5">
-                  <p className="text-sm text-slate-400">{message.time}</p>
-                  <p className="mt-1.5 font-semibold text-white">{titleParts.join(" — ")}</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-200">{message.body}</p>
+                  <p className="text-sm leading-6 text-slate-200">
+                    <span className="text-xs text-slate-400">{message.time}</span>
+                    <span className="mx-2 font-semibold text-white">{senderIdentity}</span>
+                    <span>{`— ${message.body}`}</span>
+                  </p>
                   {index < filteredMessages.length - 1 ? (
                     <div className="mt-3 border-t border-slate-700" />
                   ) : null}

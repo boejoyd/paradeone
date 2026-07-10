@@ -256,14 +256,14 @@ export function ParticipantActionsCard({
           rel="noreferrer"
           className="block w-full rounded-xl border border-slate-600 bg-slate-800 px-4 py-3 text-left text-sm font-semibold text-slate-100"
         >
-          🧭 Open Directions
+          🧭 Open Directions to Your Staging Spot
         </Link>
       ) : (
         <button
           type="button"
           className="w-full rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-3 text-left text-sm font-semibold text-slate-300"
         >
-          🧭 Open Directions
+          🧭 Open Directions to Your Staging Spot
         </button>
       )}
     </div>
