@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 import { getParticipantTokenPayload } from "@/lib/participantToken";
+import { getParticipantPushOffEstimateByToken } from "@/lib/participantPushOffEstimate";
 import { ParticipantActionsCard } from "./ParticipantActionsCard";
+import { PushOffEstimateCard } from "./PushOffEstimateCard";
 import { updateParticipantStatus } from "./actions";
 
 type ParticipantPageProps = {
@@ -43,8 +45,6 @@ function statusBadgeClass(status: string | null | undefined) {
 
   return "border-slate-700 bg-slate-800 text-slate-300";
 }
-
-const DEFAULT_RELEASE_INTERVAL_SECONDS = 90;
 
 export default async function ParticipantPage({
   params,
@@ -97,6 +97,12 @@ export default async function ParticipantPage({
     ? entry.staging_spots[0]
     : entry.staging_spots;
 
+  const pushOffEstimate = await getParticipantPushOffEstimateByToken(token);
+
+  if (!pushOffEstimate) {
+    notFound();
+  }
+
   const { data: latestLocationUpdate } = await supabase
     .from("check_ins")
     .select("created_at")
@@ -117,33 +123,6 @@ export default async function ParticipantPage({
   const geofenceRadiusFeet =
     typeof spot?.geofence_radius_feet === "number" ? spot.geofence_radius_feet : 150;
 
-  let unitsAhead: number | null = null;
-
-  if (typeof entry.parade_number === "number") {
-    const { count } = await supabase
-      .from("entries")
-      .select("id", { count: "exact", head: true })
-      .eq("event_id", payload.eventId)
-      .not("parade_number", "is", null)
-      .lt("parade_number", entry.parade_number);
-
-    unitsAhead = typeof count === "number" ? count : 0;
-  } else if (typeof entry.lineup_position === "number") {
-    const { count } = await supabase
-      .from("entries")
-      .select("id", { count: "exact", head: true })
-      .eq("event_id", payload.eventId)
-      .not("lineup_position", "is", null)
-      .lt("lineup_position", entry.lineup_position);
-
-    unitsAhead = typeof count === "number" ? count : 0;
-  }
-
-  const estimatedPushOffSeconds =
-    unitsAhead !== null ? unitsAhead * DEFAULT_RELEASE_INTERVAL_SECONDS : null;
-  const estimatedPushOffMinutes =
-    estimatedPushOffSeconds !== null ? Math.ceil(estimatedPushOffSeconds / 60) : null;
-
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-6 text-white sm:px-6">
       <section className="mx-auto max-w-md space-y-4">
@@ -160,26 +139,7 @@ export default async function ParticipantPage({
             {spot?.street_name ? ` • ${spot.street_name}` : ""}
             {spot?.section ? ` • ${spot.section}` : ""}
           </p>
-          <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/50 p-3">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Estimated Push-Off</p>
-            {estimatedPushOffMinutes !== null && unitsAhead !== null ? (
-              <>
-                <p className="mt-2 text-lg font-semibold text-white">
-                  {estimatedPushOffMinutes} min
-                </p>
-                <p className="text-sm text-slate-300">
-                  {unitsAhead} parade unit{unitsAhead === 1 ? "" : "s"} ahead
-                </p>
-                <p className="mt-1 text-xs text-slate-400">
-                  Based on your position in the lineup and the current release pace.
-                </p>
-              </>
-            ) : (
-              <p className="mt-2 text-sm text-slate-300">
-                Estimate unavailable until lineup position is assigned.
-              </p>
-            )}
-          </div>
+          <PushOffEstimateCard token={token} initialEstimate={pushOffEstimate} />
           <div className="mt-3 flex items-center gap-2">
             <span className="text-xs uppercase tracking-[0.35em] text-slate-400">
               Current Status
