@@ -2,6 +2,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { StagingLocationPicker } from "@/components/staging/StagingLocationPicker";
 import { requireAccessibleEventContext } from "@/lib/organizations/access";
 import { createStagingSpot } from "./actions";
 
@@ -86,33 +87,7 @@ export default async function NewStagingSpotPage({
             />
           </label>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <label className="grid gap-2">
-              <span className="text-sm font-medium text-slate-300">
-                Latitude
-              </span>
-              <input
-                name="latitude"
-                type="number"
-                step="any"
-                placeholder="29.4241"
-                className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-              />
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-sm font-medium text-slate-300">
-                Longitude
-              </span>
-              <input
-                name="longitude"
-                type="number"
-                step="any"
-                placeholder="-98.4936"
-                className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-              />
-            </label>
-          </div>
+          <StagingLocationPicker />
 
           <div className="grid gap-5 md:grid-cols-3">
             <label className="grid gap-2">
