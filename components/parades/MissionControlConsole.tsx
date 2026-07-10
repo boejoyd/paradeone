@@ -20,6 +20,7 @@ type MissionControlPanelKey = Exclude<MissionControlView, "combined">;
 type MissionControlOperationalStatus =
   | "ready"
   | "getting_ready"
+  | "moving"
   | "needs_assistance"
   | "not_checked_in";
 
@@ -31,6 +32,7 @@ type ParadeUnit = {
   eta: string;
   entryNumber: number | null;
   status: MissionControlOperationalStatus;
+  rawStatus: string | null;
 };
 
 type ChatMessage = {
@@ -107,6 +109,7 @@ const paradeUnits: ParadeUnit[] = [
     eta: "On site",
     entryNumber: 11,
     status: "ready",
+    rawStatus: "ready",
   },
   {
     id: "unit-2",
@@ -116,6 +119,7 @@ const paradeUnits: ParadeUnit[] = [
     eta: "10 min",
     entryNumber: 22,
     status: "getting_ready",
+    rawStatus: "getting_ready",
   },
   {
     id: "unit-3",
@@ -125,6 +129,7 @@ const paradeUnits: ParadeUnit[] = [
     eta: "15 min",
     entryNumber: 33,
     status: "getting_ready",
+    rawStatus: "getting_ready",
   },
   {
     id: "unit-4",
@@ -134,6 +139,7 @@ const paradeUnits: ParadeUnit[] = [
     eta: "Ready",
     entryNumber: 44,
     status: "ready",
+    rawStatus: "ready",
   },
   {
     id: "unit-5",
@@ -143,6 +149,7 @@ const paradeUnits: ParadeUnit[] = [
     eta: "Delayed",
     entryNumber: 55,
     status: "not_checked_in",
+    rawStatus: "not_checked_in",
   },
   {
     id: "unit-6",
@@ -152,6 +159,7 @@ const paradeUnits: ParadeUnit[] = [
     eta: "On standby",
     entryNumber: 66,
     status: "needs_assistance",
+    rawStatus: "needs_assistance",
   },
 ];
 
@@ -166,6 +174,10 @@ function toOperationalStatus(status: string | null | undefined): MissionControlO
 
   if (status === "getting_ready" || status === "staging" || status === "queued") {
     return "getting_ready";
+  }
+
+  if (status === "moving" || status === "on_route") {
+    return "moving";
   }
 
   if (status === "needs_assistance") {
@@ -312,10 +324,24 @@ function MissionControlMapPanel({
 function MissionControlUnitsPanel({
   dedicated,
   liveMapSpots,
+  statusContext,
+  onStatusUpdate,
 }: {
   dedicated: boolean;
   liveMapSpots: MissionControlMapSpot[];
+  statusContext?: MissionControlConsoleProps["statusContext"];
+  onStatusUpdate?: (update: {
+    entryId?: string;
+    entryNumber?: number;
+    status: MissionControlOperationalStatus;
+  }) => void;
 }) {
+  const [updatingEntryId, setUpdatingEntryId] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<string | null>(null);
+  const [rowErrorEntryId, setRowErrorEntryId] = useState<string | null>(null);
+  const [rowWarning, setRowWarning] = useState<string | null>(null);
+  const [rowWarningEntryId, setRowWarningEntryId] = useState<string | null>(null);
+
   const liveUnits: ParadeUnit[] = liveMapSpots.flatMap((spot) => {
     const entries = Array.isArray(spot.entries) ? spot.entries : [];
 
@@ -327,10 +353,84 @@ function MissionControlUnitsPanel({
       eta: toOperationalStatus(entry.check_in_status) === "ready" ? "Ready" : "Pending",
       entryNumber: entry.parade_number,
       status: toOperationalStatus(entry.check_in_status),
+      rawStatus: entry.check_in_status,
     }));
   });
 
-  const units = liveUnits.length > 0 ? liveUnits : paradeUnits;
+  const units =
+    liveUnits.length > 0
+      ? liveUnits
+      : paradeUnits.map((unit) => ({
+          ...unit,
+          rawStatus: unit.rawStatus ?? unit.status,
+        }));
+
+  const canPushOff = (unit: ParadeUnit) => {
+    if (unit.status !== "ready" && unit.status !== "getting_ready") {
+      return false;
+    }
+
+    if (unit.rawStatus === "moving" || unit.rawStatus === "completed") {
+      return false;
+    }
+
+    return Boolean(statusContext?.organizationId && statusContext?.eventId);
+  };
+
+  const handlePushOff = async (unit: ParadeUnit) => {
+    if (!statusContext?.organizationId || !statusContext?.eventId || updatingEntryId) {
+      return;
+    }
+
+    setUpdatingEntryId(unit.id);
+    setRowError(null);
+    setRowErrorEntryId(null);
+    setRowWarning(null);
+    setRowWarningEntryId(null);
+
+    try {
+      const response = await fetch("/api/mission-control/push-off", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          organizationId: statusContext.organizationId,
+          eventId: statusContext.eventId,
+          entryId: unit.id,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok: true;
+            entryId: string;
+            status: MissionControlOperationalStatus;
+            warning?: string;
+          }
+        | { ok: false; error?: string }
+        | null;
+
+      if (!response.ok || !payload || !payload.ok) {
+        throw new Error(payload && !payload.ok && payload.error ? payload.error : "Unable to push off unit.");
+      }
+
+      onStatusUpdate?.({
+        entryId: payload.entryId,
+        status: payload.status,
+      });
+
+      if (payload.warning) {
+        setRowWarning(payload.warning);
+        setRowWarningEntryId(unit.id);
+      }
+    } catch (error) {
+      setRowError(error instanceof Error ? error.message : "Unable to push off unit.");
+      setRowErrorEntryId(unit.id);
+    } finally {
+      setUpdatingEntryId(null);
+    }
+  };
 
   return (
     <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-800/70 bg-slate-950/85">
@@ -344,6 +444,7 @@ function MissionControlUnitsPanel({
               <th className="px-3 py-2.5 font-medium md:px-4">Entry #</th>
               <th className="px-3 py-2.5 font-medium md:px-4">ETA</th>
               <th className="px-3 py-2.5 font-medium md:px-4">Status</th>
+              <th className="px-3 py-2.5 font-medium md:px-4">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/70 text-slate-300">
@@ -356,6 +457,24 @@ function MissionControlUnitsPanel({
                 <td className="px-3 py-2.5 md:px-4">{unit.eta}</td>
                 <td className="px-3 py-2.5 md:px-4">
                   <StatusBadge status={unit.status} />
+                </td>
+                <td className="px-3 py-2.5 md:px-4">
+                  {canPushOff(unit) ? (
+                    <button
+                      type="button"
+                      onClick={() => void handlePushOff(unit)}
+                      disabled={updatingEntryId === unit.id}
+                      className="inline-flex items-center rounded border border-emerald-500 bg-emerald-600/20 px-2 py-1 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-600/35 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {updatingEntryId === unit.id ? "Pushing..." : "Push Off"}
+                    </button>
+                  ) : null}
+                  {rowError && rowErrorEntryId === unit.id && updatingEntryId === null ? (
+                    <p className="mt-1 text-xs text-red-300">{rowError}</p>
+                  ) : null}
+                  {rowWarning && rowWarningEntryId === unit.id && updatingEntryId === null ? (
+                    <p className="mt-1 text-xs text-amber-300">{rowWarning}</p>
+                  ) : null}
                 </td>
               </tr>
             ))}
@@ -373,7 +492,11 @@ function MissionControlChatPanelWithData({
 }: {
   dedicated: boolean;
   communications?: MissionControlConsoleProps["communications"];
-  onStatusUpdate?: (entryNumber: number, status: MissionControlOperationalStatus) => void;
+  onStatusUpdate?: (update: {
+    entryId?: string;
+    entryNumber?: number;
+    status: MissionControlOperationalStatus;
+  }) => void;
 }) {
   const [selectedChannel, setSelectedChannel] = useState<CommunicationsChannel>("broadcast");
   const [showCreateChannelNotice, setShowCreateChannelNotice] = useState(false);
@@ -542,7 +665,10 @@ function MissionControlChatPanelWithData({
         throw new Error(payload && !payload.ok && payload.error ? payload.error : "Unable to update status.");
       }
 
-      onStatusUpdate?.(payload.entryNumber, payload.status);
+      onStatusUpdate?.({
+        entryNumber: payload.entryNumber,
+        status: payload.status,
+      });
     } catch (error) {
       setStatusError(error instanceof Error ? error.message : "Unable to update status.");
     } finally {
@@ -737,8 +863,13 @@ function renderPanel(
     liveMapEditBasePath?: string;
     activeParadeLabel?: string;
   },
+  statusContext?: MissionControlConsoleProps["statusContext"],
   communications?: MissionControlConsoleProps["communications"],
-  onStatusUpdate?: (entryNumber: number, status: MissionControlOperationalStatus) => void
+  onStatusUpdate?: (update: {
+    entryId?: string;
+    entryNumber?: number;
+    status: MissionControlOperationalStatus;
+  }) => void
 ) {
   switch (key) {
     case "map":
@@ -751,7 +882,14 @@ function renderPanel(
         />
       );
     case "units":
-      return <MissionControlUnitsPanel dedicated={dedicated} liveMapSpots={mapProps.liveMapSpots} />;
+      return (
+        <MissionControlUnitsPanel
+          dedicated={dedicated}
+          liveMapSpots={mapProps.liveMapSpots}
+          statusContext={statusContext}
+          onStatusUpdate={onStatusUpdate}
+        />
+      );
     case "chat":
       return (
         <MissionControlChatPanelWithData
@@ -774,6 +912,7 @@ function MissionControlPanelShell({
   liveMapEditBasePath,
   activeParadeLabel,
   communications,
+  statusContext,
   onStatusUpdate,
 }: {
   panel: MissionControlPanelKey;
@@ -784,7 +923,12 @@ function MissionControlPanelShell({
   liveMapEditBasePath?: string;
   activeParadeLabel?: string;
   communications?: MissionControlConsoleProps["communications"];
-  onStatusUpdate?: (entryNumber: number, status: MissionControlOperationalStatus) => void;
+  statusContext?: MissionControlConsoleProps["statusContext"];
+  onStatusUpdate?: (update: {
+    entryId?: string;
+    entryNumber?: number;
+    status: MissionControlOperationalStatus;
+  }) => void;
 }) {
   const panelMeta: Record<MissionControlPanelKey, { title: string; icon: string }> = {
     map: { icon: "🗺", title: "Live Map" },
@@ -833,7 +977,7 @@ function MissionControlPanelShell({
           liveMapSpots: liveMapSpots ?? [],
           liveMapEditBasePath,
           activeParadeLabel,
-        }, communications, onStatusUpdate)}
+        }, statusContext, communications, onStatusUpdate)}
       </div>
     </section>
   );
@@ -952,7 +1096,11 @@ export function MissionControlConsole({
     };
   }, [statusOrganizationId, statusEventId]);
 
-  const handleStatusUpdate = (entryNumber: number, status: MissionControlOperationalStatus) => {
+  const handleStatusUpdate = (update: {
+    entryId?: string;
+    entryNumber?: number;
+    status: MissionControlOperationalStatus;
+  }) => {
     setRuntimeSpots((current) =>
       current.map((spot) => {
         if (!Array.isArray(spot.entries) || spot.entries.length === 0) {
@@ -960,7 +1108,13 @@ export function MissionControlConsole({
         }
 
         const updatedEntries = spot.entries.map((entry) =>
-          entry.parade_number === entryNumber ? { ...entry, check_in_status: status } : entry
+          update.entryId
+            ? entry.id === update.entryId
+              ? { ...entry, check_in_status: update.status }
+              : entry
+            : entry.parade_number === update.entryNumber
+              ? { ...entry, check_in_status: update.status }
+              : entry
         );
 
         return {
@@ -1092,6 +1246,7 @@ export function MissionControlConsole({
                 liveMapSpots={runtimeSpots}
                 liveMapEditBasePath={liveMapEditBasePath}
                 activeParadeLabel={activeParadeLabel}
+                statusContext={statusContext}
                 onStatusUpdate={handleStatusUpdate}
               />
 
@@ -1100,6 +1255,7 @@ export function MissionControlConsole({
                 dedicated={false}
                 onFullScreen={setExpandedPanel}
                 active={expandedPanel === "chat"}
+                statusContext={statusContext}
                 communications={communications}
                 onStatusUpdate={handleStatusUpdate}
               />
@@ -1111,6 +1267,7 @@ export function MissionControlConsole({
               onFullScreen={setExpandedPanel}
               active={expandedPanel === "units"}
               liveMapSpots={runtimeSpots}
+              statusContext={statusContext}
               onStatusUpdate={handleStatusUpdate}
             />
           </div>
@@ -1135,6 +1292,7 @@ export function MissionControlConsole({
                 liveMapSpots={runtimeSpots}
                 liveMapEditBasePath={liveMapEditBasePath}
                 activeParadeLabel={activeParadeLabel}
+                statusContext={statusContext}
                 onStatusUpdate={handleStatusUpdate}
               />
             </div>
@@ -1152,6 +1310,7 @@ export function MissionControlConsole({
                 dedicated={false}
                 onFullScreen={setExpandedPanel}
                 active={expandedPanel === "chat"}
+                statusContext={statusContext}
                 communications={communications}
                 onStatusUpdate={handleStatusUpdate}
               />
@@ -1173,6 +1332,7 @@ export function MissionControlConsole({
                     onFullScreen={setExpandedPanel}
                     active={expandedPanel === "units"}
                     liveMapSpots={runtimeSpots}
+                    statusContext={statusContext}
                     onStatusUpdate={handleStatusUpdate}
                   />
                 </div>
@@ -1198,6 +1358,7 @@ export function MissionControlConsole({
               liveMapSpots={runtimeSpots}
               liveMapEditBasePath={liveMapEditBasePath}
               activeParadeLabel={activeParadeLabel}
+              statusContext={statusContext}
               communications={communications}
               onStatusUpdate={handleStatusUpdate}
             />
@@ -1223,6 +1384,7 @@ export function MissionControlConsole({
                   liveMapSpots={runtimeSpots}
                   liveMapEditBasePath={liveMapEditBasePath}
                   activeParadeLabel={activeParadeLabel}
+                  statusContext={statusContext}
                   communications={communications}
                   onStatusUpdate={handleStatusUpdate}
                 />

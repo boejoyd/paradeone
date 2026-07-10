@@ -37,7 +37,7 @@ function formatStatus(status: string | null | undefined) {
 
 function toOperationalStatus(
   status: string | null | undefined
-): "ready" | "getting_ready" | "needs_assistance" | "not_checked_in" {
+): "ready" | "getting_ready" | "moving" | "needs_assistance" | "not_checked_in" {
   if (!status) {
     return "not_checked_in";
   }
@@ -48,6 +48,10 @@ function toOperationalStatus(
 
   if (status === "getting_ready" || status === "staging" || status === "queued") {
     return "getting_ready";
+  }
+
+  if (status === "moving" || status === "on_route") {
+    return "moving";
   }
 
   if (status === "needs_assistance") {
@@ -77,7 +81,9 @@ function highlightSpotCard(spotId: string) {
 function getMarkerClassName(status: ReturnType<typeof toOperationalStatus>) {
   return [
     "flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 text-xs font-bold text-white shadow-lg transition-transform",
-    status === "ready"
+    status === "moving"
+      ? "border-emerald-100 bg-emerald-500 animate-pulse"
+      : status === "ready"
       ? "border-green-200 bg-green-600"
       : status === "getting_ready"
         ? "border-yellow-200 bg-yellow-600"
