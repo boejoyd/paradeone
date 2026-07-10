@@ -464,7 +464,7 @@ function MissionControlUnitsPanel({
                       type="button"
                       onClick={() => void handlePushOff(unit)}
                       disabled={updatingEntryId === unit.id}
-                      className="inline-flex items-center rounded border border-emerald-500 bg-emerald-600/20 px-2 py-1 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-600/35 disabled:cursor-not-allowed disabled:opacity-70"
+                      className="inline-flex items-center rounded border border-emerald-700 bg-emerald-600 px-2 py-1 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {updatingEntryId === unit.id ? "Pushing..." : "Push Off"}
                     </button>
@@ -767,7 +767,7 @@ function MissionControlChatPanelWithData({
               <button
                 type="button"
                 onClick={() => applyStatusUpdate("ready")}
-                className="inline-flex h-8 min-h-8 items-center rounded-md border border-green-500 bg-green-600/20 px-2.5 text-xs font-semibold text-green-200 transition hover:bg-green-600/35"
+                className="inline-flex h-8 min-h-8 items-center rounded-md border border-green-700 bg-green-600 px-2.5 text-xs font-semibold text-white transition hover:bg-green-500"
                 disabled={isUpdatingStatus}
               >
                 Green / Ready
@@ -775,7 +775,7 @@ function MissionControlChatPanelWithData({
               <button
                 type="button"
                 onClick={() => applyStatusUpdate("getting_ready")}
-                className="inline-flex h-8 min-h-8 items-center rounded-md border border-yellow-500 bg-yellow-600/20 px-2.5 text-xs font-semibold text-yellow-200 transition hover:bg-yellow-600/35"
+                className="inline-flex h-8 min-h-8 items-center rounded-md border border-yellow-400 bg-yellow-300 px-2.5 text-xs font-semibold text-slate-950 transition hover:bg-yellow-200"
                 disabled={isUpdatingStatus}
               >
                 Yellow / Getting Ready
@@ -783,7 +783,7 @@ function MissionControlChatPanelWithData({
               <button
                 type="button"
                 onClick={() => applyStatusUpdate("needs_assistance")}
-                className="inline-flex h-8 min-h-8 items-center rounded-md border border-red-500 bg-red-600/20 px-2.5 text-xs font-semibold text-red-200 transition hover:bg-red-600/35"
+                className="inline-flex h-8 min-h-8 items-center rounded-md border border-red-700 bg-red-600 px-2.5 text-xs font-semibold text-white transition hover:bg-red-500"
                 disabled={isUpdatingStatus}
               >
                 Red / Need Assistance

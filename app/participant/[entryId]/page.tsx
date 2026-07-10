@@ -28,22 +28,22 @@ function statusLabel(status: string | null | undefined) {
 
 function statusBadgeClass(status: string | null | undefined) {
   if (status === "moving") {
-    return "border-emerald-400/50 bg-emerald-500/15 text-emerald-100 shadow-lg shadow-emerald-500/10 animate-pulse";
+    return "border-emerald-700 bg-emerald-600 text-white animate-pulse";
   }
 
   if (status === "ready" || status === "checked_in") {
-    return "border-emerald-400/50 bg-emerald-500/15 text-emerald-100";
+    return "border-green-700 bg-green-600 text-white";
   }
 
   if (status === "getting_ready" || status === "staging" || status === "queued") {
-    return "border-amber-400/50 bg-amber-500/15 text-amber-100";
+    return "border-yellow-400 bg-yellow-300 text-slate-950";
   }
 
   if (status === "needs_assistance") {
-    return "border-red-400/50 bg-red-500/15 text-red-100";
+    return "border-red-700 bg-red-600 text-white";
   }
 
-  return "border-slate-700 bg-slate-800 text-slate-300";
+  return "border-slate-600 bg-slate-600 text-white";
 }
 
 export default async function ParticipantPage({
@@ -168,7 +168,7 @@ export default async function ParticipantPage({
             <input type="hidden" name="status" value="getting_ready" />
             <button
               type="submit"
-              className="w-full rounded-xl border border-yellow-500/40 bg-yellow-600/15 px-4 py-3 text-left text-sm font-semibold text-yellow-100"
+              className="w-full rounded-xl border border-yellow-400 bg-yellow-300 px-4 py-3 text-left text-sm font-semibold text-slate-950"
             >
               🟡 Getting Ready
             </button>
@@ -179,7 +179,7 @@ export default async function ParticipantPage({
             <input type="hidden" name="status" value="ready" />
             <button
               type="submit"
-              className="w-full rounded-xl border border-green-500/40 bg-green-600/15 px-4 py-3 text-left text-sm font-semibold text-green-100"
+              className="w-full rounded-xl border border-green-700 bg-green-600 px-4 py-3 text-left text-sm font-semibold text-white"
             >
               🟢 Ready
             </button>
@@ -190,7 +190,7 @@ export default async function ParticipantPage({
             <input type="hidden" name="status" value="needs_assistance" />
             <button
               type="submit"
-              className="w-full rounded-xl border border-red-500/40 bg-red-600/15 px-4 py-3 text-left text-sm font-semibold text-red-100"
+              className="w-full rounded-xl border border-red-700 bg-red-600 px-4 py-3 text-left text-sm font-semibold text-white"
             >
               🔴 Need Assistance
             </button>
