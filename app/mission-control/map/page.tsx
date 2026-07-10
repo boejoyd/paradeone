@@ -39,6 +39,10 @@ export default async function MissionControlMapPage() {
           liveMapSpots={mapData.spots}
           liveMapEditBasePath={mapData.editBasePath}
           activeParadeLabel={mapData.eventName}
+          statusContext={{
+            organizationId: mapData.organizationId,
+            eventId: mapData.eventId,
+          }}
         />
       </div>
     </AppShell>

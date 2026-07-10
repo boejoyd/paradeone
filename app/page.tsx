@@ -56,6 +56,10 @@ export default async function Home() {
         liveMapSpots={mapData.spots}
         liveMapEditBasePath={mapData.editBasePath}
         activeParadeLabel={mapData.eventName}
+        statusContext={{
+          organizationId: mapData.organizationId,
+          eventId: mapData.eventId,
+        }}
         communications={{
           organizationId: mapData.organizationId,
           eventId: mapData.eventId,

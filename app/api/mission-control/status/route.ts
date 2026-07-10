@@ -16,6 +16,13 @@ type UpdateMissionControlStatusRequest = {
   status?: unknown;
 };
 
+type LiveStatusEntry = {
+  id: string;
+  paradeNumber: number | null;
+  checkInStatus: string | null;
+  checkedInAt: string | null;
+};
+
 function parseOperationalStatus(value: unknown): MissionControlOperationalStatus | null {
   return value === "ready" ||
     value === "getting_ready" ||
@@ -32,6 +39,77 @@ function parseEntryNumber(value: unknown): number | null {
   }
 
   return Math.trunc(parsed);
+}
+
+async function validateMissionControlContext(organizationId: string, eventId: string) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { error: NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 }) };
+  }
+
+  const supabase = await createServerSupabaseClient();
+  const { data: membership, error: membershipError } = await supabase
+    .from("organization_members")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (membershipError || !membership) {
+    return { error: NextResponse.json({ ok: false, error: "Forbidden." }, { status: 403 }) };
+  }
+
+  const { data: event, error: eventError } = await supabase
+    .from("events")
+    .select("id")
+    .eq("id", eventId)
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+
+  if (eventError || !event) {
+    return { error: NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 }) };
+  }
+
+  return {
+    supabase,
+  };
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const organizationId = url.searchParams.get("organizationId")?.trim() || "";
+  const eventId = url.searchParams.get("eventId")?.trim() || "";
+
+  if (!organizationId || !eventId) {
+    return NextResponse.json(
+      { ok: false, error: "Organization and event are required." },
+      { status: 400 }
+    );
+  }
+
+  const context = await validateMissionControlContext(organizationId, eventId);
+  if ("error" in context) {
+    return context.error;
+  }
+
+  const { data: entries, error } = await context.supabase
+    .from("entries")
+    .select("id, parade_number, check_in_status, checked_in_at")
+    .eq("event_id", eventId)
+    .order("parade_number", { ascending: true, nullsFirst: false });
+
+  if (error) {
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  }
+
+  const statuses: LiveStatusEntry[] = (entries ?? []).map((entry) => ({
+    id: entry.id,
+    paradeNumber: entry.parade_number,
+    checkInStatus: entry.check_in_status,
+    checkedInAt: entry.checked_in_at,
+  }));
+
+  return NextResponse.json({ ok: true, statuses });
 }
 
 export async function POST(request: Request) {
@@ -51,33 +129,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
+  const context = await validateMissionControlContext(organizationId, eventId);
+  if ("error" in context) {
+    return context.error;
   }
 
-  const supabase = await createServerSupabaseClient();
-  const { data: membership, error: membershipError } = await supabase
-    .from("organization_members")
-    .select("id")
-    .eq("organization_id", organizationId)
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (membershipError || !membership) {
-    return NextResponse.json({ ok: false, error: "Forbidden." }, { status: 403 });
-  }
-
-  const { data: event, error: eventError } = await supabase
-    .from("events")
-    .select("id")
-    .eq("id", eventId)
-    .eq("organization_id", organizationId)
-    .maybeSingle();
-
-  if (eventError || !event) {
-    return NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 });
-  }
+  const supabase = context.supabase;
 
   const { data: entry, error: entryError } = await supabase
     .from("entries")

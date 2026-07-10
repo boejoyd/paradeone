@@ -34,7 +34,14 @@ export default async function MissionControlUnitsPage() {
       </div>
 
       <div className="min-h-[calc(100dvh-5.75rem)]">
-        <MissionControlConsole view="units" liveMapSpots={mapData.spots} />
+        <MissionControlConsole
+          view="units"
+          liveMapSpots={mapData.spots}
+          statusContext={{
+            organizationId: mapData.organizationId,
+            eventId: mapData.eventId,
+          }}
+        />
       </div>
     </AppShell>
   );

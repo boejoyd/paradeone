@@ -75,6 +75,10 @@ type MissionControlConsoleProps = {
   liveMapSpots?: MissionControlMapSpot[];
   liveMapEditBasePath?: string;
   activeParadeLabel?: string;
+  statusContext?: {
+    organizationId?: string;
+    eventId?: string;
+  };
   communications?: {
     organizationId?: string;
     eventId?: string;
@@ -840,6 +844,7 @@ export function MissionControlConsole({
   liveMapSpots = [],
   liveMapEditBasePath,
   activeParadeLabel,
+  statusContext,
   communications,
 }: MissionControlConsoleProps) {
   const [runtimeSpots, setRuntimeSpots] = useState<MissionControlMapSpot[]>(liveMapSpots);
@@ -852,10 +857,100 @@ export function MissionControlConsole({
   const unitsPaneRef = useRef<HTMLDivElement | null>(null);
   const isCombined = view === "combined";
   const focusedPanel = isCombined ? null : view;
+  const statusOrganizationId = statusContext?.organizationId ?? communications?.organizationId;
+  const statusEventId = statusContext?.eventId ?? communications?.eventId;
 
   useEffect(() => {
     setRuntimeSpots(liveMapSpots);
   }, [liveMapSpots]);
+
+  useEffect(() => {
+    if (!statusOrganizationId || !statusEventId) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const pollStatuses = async () => {
+      const response = await fetch(
+        `/api/mission-control/status?organizationId=${encodeURIComponent(statusOrganizationId)}&eventId=${encodeURIComponent(statusEventId)}`,
+        {
+          method: "GET",
+          cache: "no-store",
+        }
+      ).catch(() => null);
+
+      if (!response || !response.ok) {
+        return;
+      }
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok: true;
+            statuses: Array<{
+              id: string;
+              paradeNumber: number | null;
+              checkInStatus: string | null;
+              checkedInAt: string | null;
+            }>;
+          }
+        | { ok: false; error?: string }
+        | null;
+
+      if (isCancelled || !payload || !payload.ok) {
+        return;
+      }
+
+      const statusByEntryId = new Map(
+        payload.statuses.map((entryStatus) => [entryStatus.id, entryStatus])
+      );
+
+      setRuntimeSpots((current) => {
+        let changed = false;
+
+        const next = current.map((spot) => {
+          if (!Array.isArray(spot.entries) || spot.entries.length === 0) {
+            return spot;
+          }
+
+          let spotChanged = false;
+          const nextEntries = spot.entries.map((entry) => {
+            const liveStatus = statusByEntryId.get(entry.id);
+            if (!liveStatus || entry.check_in_status === liveStatus.checkInStatus) {
+              return entry;
+            }
+
+            spotChanged = true;
+            changed = true;
+
+            return {
+              ...entry,
+              check_in_status: liveStatus.checkInStatus,
+            };
+          });
+
+          return spotChanged
+            ? {
+                ...spot,
+                entries: nextEntries,
+              }
+            : spot;
+        });
+
+        return changed ? next : current;
+      });
+    };
+
+    void pollStatuses();
+    const timer = window.setInterval(() => {
+      void pollStatuses();
+    }, 4000);
+
+    return () => {
+      isCancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [statusOrganizationId, statusEventId]);
 
   const handleStatusUpdate = (entryNumber: number, status: MissionControlOperationalStatus) => {
     setRuntimeSpots((current) =>
