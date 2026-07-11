@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { requireAccessibleEventContext } from "@/lib/organizations/access";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { autoNumberLineup } from "./actions";
+import { formatVehicleType } from "@/lib/entries/vehicleTypes";
 
 type LineupPageProps = {
   params: Promise<{
@@ -24,7 +25,7 @@ export default async function LineupPage({ params }: LineupPageProps) {
   const { data: entries, error } = await supabase
     .from("entries")
     .select(
-      "id, name, entry_type, status, parade_number, lineup_position, section, staging_spot, check_in_status, staging_spots(spot_code, section, street_name)"
+      "id, name, entry_type, vehicle_type, status, parade_number, lineup_position, section, staging_spot, check_in_status, staging_spots(spot_code, section, street_name)"
     )
     .eq("event_id", eventId)
     .order("lineup_position", { ascending: true, nullsFirst: false })
@@ -109,6 +110,7 @@ export default async function LineupPage({ params }: LineupPageProps) {
                       <span className="text-sm text-slate-400">
                         {entry.entry_type}
                       </span>
+                      {entry.vehicle_type ? <span className="text-sm text-slate-500">Vehicle: {formatVehicleType(entry.vehicle_type)}</span> : null}
                       <StatusBadge status={entry.status} />
                     </div>
 

@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 
 import { getParticipantTokenPayload } from "@/lib/participantToken";
 import { supabase } from "@/lib/supabase";
+import { evaluateRouteStateForLocation, MAX_ROUTE_GPS_ACCURACY_METERS, type RouteState } from "@/lib/routeState";
 
 type LocationUpdateRequest = {
   token?: unknown;
   latitude?: unknown;
   longitude?: unknown;
+  accuracy?: unknown;
 };
 
 function parseCoordinate(value: unknown) {
@@ -19,10 +21,11 @@ export async function POST(request: Request) {
   const token = String(payload?.token || "").trim();
   const latitude = parseCoordinate(payload?.latitude);
   const longitude = parseCoordinate(payload?.longitude);
+  const accuracy = parseCoordinate(payload?.accuracy);
 
-  if (!token || latitude === null || longitude === null) {
+  if (!token || latitude === null || longitude === null || accuracy === null || accuracy < 0) {
     return NextResponse.json(
-      { ok: false, error: "Token, latitude, and longitude are required." },
+      { ok: false, error: "Token, latitude, longitude, and GPS accuracy are required." },
       { status: 400 }
     );
   }
@@ -41,7 +44,7 @@ export async function POST(request: Request) {
 
   const { data: entry, error: entryError } = await supabase
     .from("entries")
-    .select("id, event_id, staging_spot_id")
+    .select("id, event_id, staging_spot_id, pushed_off_at, route_state, route_candidate_state, route_candidate_count, route_candidate_since, finish_confirmed_at")
     .eq("id", participantToken.entryId)
     .single();
 
@@ -58,6 +61,7 @@ export async function POST(request: Request) {
     latitude,
     longitude,
     method: "participant_live",
+    accuracy_meters: accuracy,
     checked_in_at: updatedAt,
   });
 
@@ -78,5 +82,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: entryUpdateError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, updatedAt });
+  let routeState = entry.route_state as RouteState;
+  if (accuracy <= MAX_ROUTE_GPS_ACCURACY_METERS) {
+    routeState = await evaluateRouteStateForLocation({
+      supabase,
+      entry: {
+        ...entry,
+        route_state: routeState,
+        route_candidate_state: entry.route_candidate_state as RouteState | null,
+      },
+      latitude,
+      longitude,
+      accuracyMeters: accuracy,
+      observedAt: updatedAt,
+    });
+  }
+
+  return NextResponse.json({ ok: true, updatedAt, routeState, readingQualified: accuracy <= MAX_ROUTE_GPS_ACCURACY_METERS });
 }

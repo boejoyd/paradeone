@@ -13,6 +13,8 @@ export type MissionControlMapSpot = {
     name: string;
     parade_number: number | null;
     check_in_status: string | null;
+    pushed_off_at: string | null;
+    route_state: string;
   }[] | null;
 };
 
@@ -57,7 +59,7 @@ export async function getMissionControlMapData(): Promise<MissionControlMapData>
   const { data: spots, error } = await supabase
     .from("staging_spots")
     .select(
-      "id, spot_code, section, street_name, latitude, longitude, geofence_radius_feet, reserved_length_feet, entries(id, name, parade_number, check_in_status)"
+      "id, spot_code, section, street_name, latitude, longitude, geofence_radius_feet, reserved_length_feet, entries(id, name, parade_number, check_in_status, pushed_off_at, route_state)"
     )
     .eq("event_id", eventRow.id)
     .order("sort_order", { ascending: true, nullsFirst: false })

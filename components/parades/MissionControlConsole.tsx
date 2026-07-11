@@ -22,6 +22,12 @@ type MissionControlOperationalStatus =
   | "ready"
   | "getting_ready"
   | "moving"
+  | "pushed_off"
+  | "approaching_start"
+  | "on_route"
+  | "approaching_finish"
+  | "completed"
+  | "staged"
   | "needs_assistance"
   | "not_checked_in";
 
@@ -196,8 +202,8 @@ function toOperationalStatus(status: string | null | undefined): MissionControlO
     return "getting_ready";
   }
 
-  if (status === "moving" || status === "on_route") {
-    return "moving";
+  if (status === "moving" || status === "pushed_off" || status === "approaching_start" || status === "on_route" || status === "approaching_finish" || status === "completed" || status === "staged") {
+    return status;
   }
 
   if (status === "needs_assistance") {
@@ -376,8 +382,8 @@ function MissionControlUnitsPanel({
       stagingSpot: spot.spot_code,
       eta: toOperationalStatus(entry.check_in_status) === "ready" ? "Ready" : "Pending",
       entryNumber: entry.parade_number,
-      status: toOperationalStatus(entry.check_in_status),
-      rawStatus: entry.check_in_status,
+      status: toOperationalStatus(entry.route_state !== "staged" ? entry.route_state : entry.pushed_off_at ? "pushed_off" : entry.check_in_status),
+      rawStatus: entry.route_state !== "staged" ? entry.route_state : entry.pushed_off_at ? "pushed_off" : entry.check_in_status,
     }));
   });
 
@@ -548,7 +554,11 @@ function MissionControlUnitsPanel({
                   <StatusBadge status={unit.status} />
                 </td>
                 <td className="px-3 py-2.5 md:px-4">
-                  {canPushOff(unit) ? (
+                  {unit.status === "moving" || (unit.rawStatus !== null && ["pushed_off", "approaching_start", "on_route", "approaching_finish", "completed"].includes(unit.rawStatus)) ? (
+                    <button type="button" disabled className="inline-flex items-center rounded border border-emerald-800 bg-emerald-950 px-2 py-1 text-xs font-semibold text-emerald-300 opacity-80">
+                      Moving
+                    </button>
+                  ) : canPushOff(unit) ? (
                     <button
                       type="button"
                       onClick={() => void handlePushOff(unit)}
@@ -974,6 +984,25 @@ function MissionControlChatPanelWithData({
               >
                 Red / Need Assistance
               </button>
+              <select
+                aria-label="Manual route-state override"
+                defaultValue=""
+                disabled={isUpdatingStatus}
+                onChange={(event) => {
+                  const status = event.target.value as MissionControlOperationalStatus;
+                  if (status) void applyStatusUpdate(status);
+                  event.currentTarget.value = "";
+                }}
+                className="h-8 min-h-8 rounded-md border border-sky-700 bg-slate-900 px-2 text-xs font-semibold text-sky-100"
+              >
+                <option value="">Override route state…</option>
+                <option value="staged">Staged</option>
+                <option value="pushed_off">Pushed Off</option>
+                <option value="approaching_start">Approaching Start</option>
+                <option value="on_route">On Route</option>
+                <option value="approaching_finish">Approaching Finish</option>
+                <option value="completed">Completed</option>
+              </select>
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -1231,6 +1260,8 @@ export function MissionControlConsole({
               paradeNumber: number | null;
               checkInStatus: string | null;
               checkedInAt: string | null;
+              pushedOffAt: string | null;
+              routeState: string;
             }>;
           }
         | { ok: false; error?: string }
@@ -1255,7 +1286,7 @@ export function MissionControlConsole({
           let spotChanged = false;
           const nextEntries = spot.entries.map((entry) => {
             const liveStatus = statusByEntryId.get(entry.id);
-            if (!liveStatus || entry.check_in_status === liveStatus.checkInStatus) {
+            if (!liveStatus || (entry.check_in_status === liveStatus.checkInStatus && entry.route_state === liveStatus.routeState)) {
               return entry;
             }
 
@@ -1265,6 +1296,7 @@ export function MissionControlConsole({
             return {
               ...entry,
               check_in_status: liveStatus.checkInStatus,
+              route_state: liveStatus.routeState,
             };
           });
 

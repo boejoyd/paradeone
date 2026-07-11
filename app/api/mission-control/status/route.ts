@@ -8,6 +8,8 @@ type MissionControlOperationalStatus =
   | "getting_ready"
   | "needs_assistance"
   | "not_checked_in";
+type RouteState = "staged" | "pushed_off" | "approaching_start" | "on_route" | "approaching_finish" | "completed";
+type MissionControlStatus = MissionControlOperationalStatus | RouteState;
 
 type UpdateMissionControlStatusRequest = {
   organizationId?: unknown;
@@ -22,6 +24,8 @@ type LiveStatusEntry = {
   paradeNumber: number | null;
   checkInStatus: string | null;
   checkedInAt: string | null;
+  pushedOffAt: string | null;
+  routeState: RouteState;
 };
 
 function parseOperationalStatus(value: unknown): MissionControlOperationalStatus | null {
@@ -31,6 +35,10 @@ function parseOperationalStatus(value: unknown): MissionControlOperationalStatus
     value === "not_checked_in"
     ? value
     : null;
+}
+
+function parseRouteState(value: unknown): RouteState | null {
+  return value === "staged" || value === "pushed_off" || value === "approaching_start" || value === "on_route" || value === "approaching_finish" || value === "completed" ? value : null;
 }
 
 function parseEntryNumber(value: unknown): number | null {
@@ -95,7 +103,7 @@ export async function GET(request: Request) {
 
   const { data: entries, error } = await context.supabase
     .from("entries")
-    .select("id, parade_number, check_in_status, checked_in_at")
+    .select("id, parade_number, check_in_status, checked_in_at, pushed_off_at, route_state")
     .eq("event_id", eventId)
     .order("parade_number", { ascending: true, nullsFirst: false });
 
@@ -106,8 +114,10 @@ export async function GET(request: Request) {
   const statuses: LiveStatusEntry[] = (entries ?? []).map((entry) => ({
     id: entry.id,
     paradeNumber: entry.parade_number,
-    checkInStatus: entry.check_in_status,
+    checkInStatus: entry.route_state !== "staged" ? entry.route_state : entry.pushed_off_at ? "pushed_off" : entry.check_in_status,
     checkedInAt: entry.checked_in_at,
+    pushedOffAt: entry.pushed_off_at,
+    routeState: entry.route_state as RouteState,
   }));
 
   return NextResponse.json({ ok: true, statuses });
@@ -122,7 +132,9 @@ export async function POST(request: Request) {
   const eventId = String(payload?.eventId || "").trim();
   const entryId = String(payload?.entryId || "").trim();
   const entryNumber = parseEntryNumber(payload?.entryNumber);
-  const status = parseOperationalStatus(payload?.status);
+  const operationalStatus = parseOperationalStatus(payload?.status);
+  const routeState = parseRouteState(payload?.status);
+  const status: MissionControlStatus | null = routeState || operationalStatus;
 
   if (!organizationId || !eventId || (!entryId && !entryNumber) || !status) {
     return NextResponse.json(
@@ -154,20 +166,48 @@ export async function POST(request: Request) {
   }
 
   const updatePayload: {
-    check_in_status: MissionControlOperationalStatus;
+    check_in_status?: MissionControlOperationalStatus;
     checked_in_at?: string | null;
+    route_state?: RouteState;
+    route_state_updated_at?: string;
+    route_state_manual_override_at?: string;
+    route_candidate_state?: null;
+    route_candidate_count?: number;
+    route_candidate_since?: null;
+    pushed_off_at?: string;
+    approaching_start_at?: string;
+    on_route_at?: string;
+    approaching_finish_at?: string;
+    route_completed_at?: string;
   } = {
-    check_in_status: status,
   };
 
-  if (status === "ready") {
+  if (routeState) {
+    const now = new Date().toISOString();
+    updatePayload.route_state = routeState;
+    updatePayload.route_state_updated_at = now;
+    updatePayload.route_state_manual_override_at = now;
+    updatePayload.route_candidate_state = null;
+    updatePayload.route_candidate_count = 0;
+    updatePayload.route_candidate_since = null;
+    if (routeState === "pushed_off") updatePayload.pushed_off_at = now;
+    if (routeState === "approaching_start") updatePayload.approaching_start_at = now;
+    if (routeState === "on_route") updatePayload.on_route_at = now;
+    if (routeState === "approaching_finish") updatePayload.approaching_finish_at = now;
+    if (routeState === "completed") updatePayload.route_completed_at = now;
+  } else if (operationalStatus) {
+    updatePayload.check_in_status = operationalStatus;
+  }
+
+  if (operationalStatus === "ready") {
     updatePayload.checked_in_at = new Date().toISOString();
   }
 
-  if (status === "not_checked_in") {
+  if (operationalStatus === "not_checked_in") {
     updatePayload.checked_in_at = null;
   }
 
+  const { data: currentEntry } = await supabase.from("entries").select("route_state").eq("id", entry.id).eq("event_id", eventId).single();
   const { error: updateError } = await supabase
     .from("entries")
     .update(updatePayload)
@@ -176,6 +216,10 @@ export async function POST(request: Request) {
 
   if (updateError) {
     return NextResponse.json({ ok: false, error: updateError.message }, { status: 500 });
+  }
+
+  if (routeState) {
+    await supabase.from("entry_route_state_events").insert({ event_id: eventId, entry_id: entry.id, from_state: currentEntry?.route_state || null, to_state: routeState, transition_source: "manual" });
   }
 
   return NextResponse.json({

@@ -67,6 +67,7 @@ export function ParticipantLocationButton({
             token,
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
           }),
         });
 

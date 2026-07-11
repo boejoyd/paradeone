@@ -7,18 +7,67 @@ import { useEffect, useRef, useState } from "react";
 type StagingLocationPickerProps = {
   initialLatitude?: number | null;
   initialLongitude?: number | null;
+  existingSpots?: ExistingStagingSpot[];
 };
+
+type ExistingStagingSpot = {
+  id: string;
+  spot_code: string;
+  section: string | null;
+  street_name: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  entries?: { name: string }[] | { name: string } | null;
+};
+
+function existingMarkerElement(spotCode: string) {
+  const element = document.createElement("div");
+  element.classList.add("flex", "h-10", "min-w-10", "cursor-pointer", "items-center", "justify-center", "rounded-full", "border-2", "border-slate-200", "bg-slate-600", "px-2", "text-xs", "font-bold", "text-white", "shadow-lg");
+  element.textContent = spotCode;
+  return element;
+}
+
+function temporaryMarkerElement() {
+  const element = document.createElement("div");
+  element.classList.add("flex", "h-12", "min-w-12", "items-center", "justify-center", "rounded-full", "border-4", "border-white", "bg-orange-500", "px-2", "text-[10px]", "font-black", "text-slate-950", "shadow-xl", "ring-4", "ring-orange-400/40");
+  element.textContent = "NEW";
+  return element;
+}
+
+function popupContent(spot: ExistingStagingSpot) {
+  const container = document.createElement("div");
+  container.style.minWidth = "200px";
+  const title = document.createElement("strong");
+  title.style.fontSize = "16px";
+  title.textContent = spot.spot_code;
+  container.appendChild(title);
+  const assignedEntry = Array.isArray(spot.entries) ? spot.entries[0] : spot.entries;
+  for (const value of [
+    `Section: ${spot.section || "Not set"}`,
+    `Street: ${spot.street_name || "Not set"}`,
+    `Assigned: ${assignedEntry?.name || "Unassigned"}`,
+  ]) {
+    const row = document.createElement("div");
+    row.style.marginTop = "6px";
+    row.textContent = value;
+    container.appendChild(row);
+  }
+  return container;
+}
 
 function coordinatesAreValid(latitude: number, longitude: number) {
   return Number.isFinite(latitude) && Number.isFinite(longitude) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
 }
 
-export function StagingLocationPicker({ initialLatitude = null, initialLongitude = null }: StagingLocationPickerProps) {
+export function StagingLocationPicker({ initialLatitude = null, initialLongitude = null, existingSpots = [] }: StagingLocationPickerProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const existingMarkerRecordsRef = useRef<mapboxgl.Marker[]>([]);
+  const initialExistingSpotsRef = useRef(existingSpots);
   const hasInitialCoordinates = initialLatitude !== null && initialLongitude !== null && coordinatesAreValid(initialLatitude, initialLongitude);
-  const centerRef = useRef<[number, number]>(hasInitialCoordinates ? [initialLongitude!, initialLatitude!] : [-98.4936, 29.4241]);
+  const firstExistingSpot = existingSpots.find((spot) => spot.latitude !== null && spot.longitude !== null && coordinatesAreValid(spot.latitude, spot.longitude));
+  const centerRef = useRef<[number, number]>(hasInitialCoordinates ? [initialLongitude!, initialLatitude!] : firstExistingSpot ? [firstExistingSpot.longitude!, firstExistingSpot.latitude!] : [-98.4936, 29.4241]);
   const [latitude, setLatitude] = useState(initialLatitude === null ? "" : String(initialLatitude));
   const [longitude, setLongitude] = useState(initialLongitude === null ? "" : String(initialLongitude));
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -37,6 +86,18 @@ export function StagingLocationPicker({ initialLatitude = null, initialLongitude
 
     mapRef.current = map;
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
+    const locatedExistingSpots = initialExistingSpotsRef.current.filter(
+      (spot) => spot.latitude !== null && spot.longitude !== null && coordinatesAreValid(spot.latitude, spot.longitude)
+    );
+    for (const spot of locatedExistingSpots) {
+      const element = existingMarkerElement(spot.spot_code);
+      element.addEventListener("click", (event) => event.stopPropagation());
+      const marker = new mapboxgl.Marker({ element, draggable: false })
+        .setLngLat([spot.longitude!, spot.latitude!])
+        .setPopup(new mapboxgl.Popup({ offset: 24 }).setDOMContent(popupContent(spot)))
+        .addTo(map);
+      existingMarkerRecordsRef.current.push(marker);
+    }
     map.on("click", (event) => {
       setLatitude(event.lngLat.lat.toFixed(6));
       setLongitude(event.lngLat.lng.toFixed(6));
@@ -44,11 +105,22 @@ export function StagingLocationPicker({ initialLatitude = null, initialLongitude
 
     const resizeMap = () => map.resize();
     resizeMap();
+    map.once("load", () => {
+      resizeMap();
+      if (locatedExistingSpots.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds();
+        locatedExistingSpots.forEach((spot) => bounds.extend([spot.longitude!, spot.latitude!]));
+        map.fitBounds(bounds, { padding: 70, maxZoom: 17 });
+      }
+    });
     const observer = new ResizeObserver(resizeMap);
     observer.observe(container);
 
     return () => {
       observer.disconnect();
+      existingMarkerRecordsRef.current.forEach((marker) => marker.remove());
+      existingMarkerRecordsRef.current = [];
+      markerRef.current?.remove();
       map.remove();
       mapRef.current = null;
       markerRef.current = null;
@@ -71,7 +143,7 @@ export function StagingLocationPicker({ initialLatitude = null, initialLongitude
 
     const position: [number, number] = [parsedLongitude, parsedLatitude];
     if (!markerRef.current) {
-      markerRef.current = new mapboxgl.Marker().setLngLat(position).addTo(map);
+      markerRef.current = new mapboxgl.Marker({ element: temporaryMarkerElement() }).setLngLat(position).addTo(map);
     } else {
       markerRef.current.setLngLat(position);
     }

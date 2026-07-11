@@ -10,6 +10,7 @@ type ParticipantActionsCardProps = {
   geofenceRadiusFeet: number;
   initialLastGpsUpdate: string | null;
   directionsHref: string | null;
+  initialRouteState: string;
 };
 
 type LocationPayload = {
@@ -46,6 +47,7 @@ export function ParticipantActionsCard({
   geofenceRadiusFeet,
   initialLastGpsUpdate,
   directionsHref,
+  initialRouteState,
 }: ParticipantActionsCardProps) {
   const [status, setStatus] = useState<string>("Not Checked In");
   const [isSharing, setIsSharing] = useState(false);
@@ -54,6 +56,7 @@ export function ParticipantActionsCard({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [checkInMessage, setCheckInMessage] = useState<string | null>(null);
   const [isSubmittingCheckIn, setIsSubmittingCheckIn] = useState(false);
+  const [routeState, setRouteState] = useState(initialRouteState);
 
   const formattedLastGpsUpdate = useMemo(
     () => formatTimestamp(lastGpsUpdate),
@@ -109,6 +112,7 @@ export function ParticipantActionsCard({
             token,
             latitude,
             longitude,
+            accuracy: position.coords.accuracy,
           }),
         });
 
@@ -121,12 +125,13 @@ export function ParticipantActionsCard({
         }
 
         const payload = (await response.json().catch(() => null)) as
-          | { updatedAt?: string }
+          | { updatedAt?: string; routeState?: string }
           | null;
 
         setIsSharing(true);
         setCurrentLocation({ latitude, longitude, updatedAt: payload?.updatedAt || new Date().toISOString() });
         setLastGpsUpdate(payload?.updatedAt || new Date().toISOString());
+        if (payload?.routeState) setRouteState(payload.routeState);
       },
       (error) => {
         if (error.code === error.PERMISSION_DENIED) {
@@ -247,6 +252,9 @@ export function ParticipantActionsCard({
 
       <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
         Current Status: {status}
+      </p>
+      <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+        Route State: {routeState.replace(/_/g, " ")}
       </p>
 
       {directionsHref ? (

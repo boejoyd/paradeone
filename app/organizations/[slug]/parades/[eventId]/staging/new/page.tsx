@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StagingLocationPicker } from "@/components/staging/StagingLocationPicker";
 import { requireAccessibleEventContext } from "@/lib/organizations/access";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createStagingSpot } from "./actions";
 
 type NewStagingSpotPageProps = {
@@ -19,6 +20,15 @@ export default async function NewStagingSpotPage({
   const { slug, eventId } = await params;
 
   const { organization, event } = await requireAccessibleEventContext(slug, eventId);
+  const supabase = await createServerSupabaseClient();
+  const { data: existingSpots, error: spotsError } = await supabase
+    .from("staging_spots")
+    .select("id, spot_code, section, street_name, latitude, longitude, entries(name)")
+    .eq("event_id", eventId)
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("spot_code", { ascending: true });
+
+  if (spotsError) throw new Error(spotsError.message);
 
   return (
     <AppShell>
@@ -87,7 +97,7 @@ export default async function NewStagingSpotPage({
             />
           </label>
 
-          <StagingLocationPicker />
+          <StagingLocationPicker existingSpots={existingSpots || []} />
 
           <div className="grid gap-5 md:grid-cols-3">
             <label className="grid gap-2">

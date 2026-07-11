@@ -22,6 +22,7 @@ type EntrySnapshot = {
   contact_phone: string | null;
   check_in_status: string | null;
   pushed_off_at: string | null;
+  route_state: string;
   sms_opt_in: boolean;
 };
 
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
   const { data: entry, error: entryError } = await context.supabase
     .from("entries")
     .select(
-      "id, event_id, name, parade_number, contact_phone, check_in_status, pushed_off_at, sms_opt_in"
+      "id, event_id, name, parade_number, contact_phone, check_in_status, pushed_off_at, route_state, sms_opt_in"
     )
     .eq("id", entryId)
     .eq("event_id", eventId)
@@ -139,6 +140,23 @@ if (!entry) {
   const typedEntry = entry as EntrySnapshot;
 
   if (typedEntry.check_in_status === "moving" || typedEntry.pushed_off_at) {
+    let checkInStatus = "moving";
+    if (typedEntry.check_in_status !== "moving" || typedEntry.route_state === "staged") {
+      const { data: repairedEntry, error: repairError } = await context.supabase
+        .from("entries")
+        .update({ check_in_status: "moving", route_state: "pushed_off", route_state_updated_at: typedEntry.pushed_off_at || new Date().toISOString() })
+        .eq("id", entryId)
+        .eq("event_id", eventId)
+        .select("check_in_status")
+        .single();
+      if (repairError || !repairedEntry) {
+        return NextResponse.json(
+          { ok: false, error: repairError?.message || "Unable to restore moving status." },
+          { status: 500 }
+        );
+      }
+      checkInStatus = repairedEntry.check_in_status;
+    }
     return NextResponse.json({
       ok: true,
       entryId,
@@ -146,6 +164,7 @@ if (!entry) {
       pushedOffAt: typedEntry.pushed_off_at,
       smsSent: false,
       alreadyPushedOff: true,
+      entry: { id: entryId, checkInStatus, pushedOffAt: typedEntry.pushed_off_at },
     });
   }
 
@@ -156,12 +175,14 @@ if (!entry) {
     .update({
       check_in_status: "moving",
       pushed_off_at: pushedOffAt,
+      route_state: "pushed_off",
+      route_state_updated_at: pushedOffAt,
     })
     .eq("id", entryId)
     .eq("event_id", eventId)
     .is("pushed_off_at", null)
     .select(
-      "id, event_id, name, parade_number, contact_phone, check_in_status, pushed_off_at, sms_opt_in"
+      "id, event_id, name, parade_number, contact_phone, check_in_status, pushed_off_at, route_state, sms_opt_in"
     )
     .maybeSingle();
 
@@ -181,6 +202,11 @@ if (!entry) {
         pushedOffAt: latestEntry.pushed_off_at,
         smsSent: false,
         alreadyPushedOff: true,
+        entry: {
+          id: entryId,
+          checkInStatus: "moving",
+          pushedOffAt: latestEntry.pushed_off_at,
+        },
       });
     }
 
@@ -189,6 +215,14 @@ if (!entry) {
       { status: 500 }
     );
   }
+
+  await context.supabase.from("entry_route_state_events").insert({
+    event_id: eventId,
+    entry_id: entryId,
+    from_state: typedEntry.route_state,
+    to_state: "pushed_off",
+    transition_source: "push_off",
+  });
 
   const activeParticipant = await context.supabase
     .from("communication_participants")
@@ -287,5 +321,10 @@ if (!entry) {
     pushedOffAt,
     smsSent,
     warning,
+    entry: {
+      id: updatedEntry.id,
+      checkInStatus: updatedEntry.check_in_status,
+      pushedOffAt: updatedEntry.pushed_off_at,
+    },
   });
 }

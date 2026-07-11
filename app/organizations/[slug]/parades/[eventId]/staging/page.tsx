@@ -3,7 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { LiveStagingMap } from "@/components/maps/LiveStagingMap";
+import { StagingLayoutEditor } from "@/components/staging/StagingLayoutEditor";
 import { requireAccessibleEventContext } from "@/lib/organizations/access";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -68,7 +68,8 @@ export default async function StagingPage({ params }: StagingPageProps) {
 
       <div className="space-y-6">
         <div>
-          <LiveStagingMap
+          <StagingLayoutEditor
+            eventId={eventId}
             spots={spots || []}
             editBasePath={`/organizations/${slug}/parades/${eventId}/staging`}
           />

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { requireAccessibleEventContext } from "@/lib/organizations/access";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { updateEntry } from "./actions";
+import { VEHICLE_TYPE_OPTIONS } from "@/lib/entries/vehicleTypes";
 
 type EditEntryPageProps = {
   params: Promise<{
@@ -96,6 +97,15 @@ export default async function EditEntryPage({ params }: EditEntryPageProps) {
               </select>
             </label>
           </div>
+
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-slate-300">Vehicle Type <span className="font-normal text-slate-500">(optional)</span></span>
+            <select name="vehicleType" defaultValue={entry.vehicle_type || ""} className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white">
+              <option value="">Not specified</option>
+              {VEHICLE_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <span className="text-xs text-slate-500">Operational vehicle or movement type; separate from Entry Type.</span>
+          </label>
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2">

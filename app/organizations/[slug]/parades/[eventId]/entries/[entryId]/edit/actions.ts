@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireOrganizationRole } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { parseVehicleType } from "@/lib/entries/vehicleTypes";
 
 export async function updateEntry(formData: FormData) {
   const slug = String(formData.get("slug") || "");
@@ -27,6 +28,7 @@ export async function updateEntry(formData: FormData) {
     .update({
       name: String(formData.get("name") || "").trim(),
       entry_type: String(formData.get("entryType") || "float"),
+      vehicle_type: parseVehicleType(formData.get("vehicleType")),
       status: String(formData.get("status") || "draft"),
       contact_name: String(formData.get("contactName") || "").trim() || null,
       contact_email: String(formData.get("contactEmail") || "").trim() || null,

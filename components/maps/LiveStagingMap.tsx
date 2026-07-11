@@ -51,7 +51,7 @@ function toOperationalStatus(
     return "getting_ready";
   }
 
-  if (status === "moving" || status === "on_route") {
+  if (status === "moving" || status === "pushed_off" || status === "approaching_start" || status === "on_route" || status === "approaching_finish") {
     return "moving";
   }
 

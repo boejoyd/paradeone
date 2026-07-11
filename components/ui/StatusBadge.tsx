@@ -16,6 +16,11 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   const styles: Record<string, string> = {
     ready: "border-green-700 bg-green-600 text-white",
     moving: "border-emerald-700 bg-emerald-600 text-white animate-pulse",
+    pushed_off: "border-emerald-700 bg-emerald-600 text-white animate-pulse",
+    approaching_start: "border-cyan-700 bg-cyan-600 text-white animate-pulse",
+    on_route: "border-blue-700 bg-blue-600 text-white animate-pulse",
+    approaching_finish: "border-violet-700 bg-violet-600 text-white animate-pulse",
+    staged: "border-yellow-500 bg-yellow-400 text-slate-950",
     getting_ready: "border-yellow-400 bg-yellow-300 text-slate-950",
     needs_assistance: "border-red-700 bg-red-600 text-white",
     checked_in: "border-green-700 bg-green-600 text-white",

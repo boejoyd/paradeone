@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireOrganizationRole } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { parseVehicleType } from "@/lib/entries/vehicleTypes";
 
 export async function createEntry(formData: FormData) {
   const slug = String(formData.get("slug") || "");
@@ -30,6 +31,7 @@ export async function createEntry(formData: FormData) {
     event_id: eventId,
     name: String(formData.get("name") || "").trim(),
     entry_type: String(formData.get("entryType") || "float"),
+    vehicle_type: parseVehicleType(formData.get("vehicleType")),
     status: "draft",
     contact_name: String(formData.get("contactName") || "").trim() || null,
     contact_email: String(formData.get("contactEmail") || "").trim() || null,

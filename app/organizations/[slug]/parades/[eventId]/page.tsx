@@ -219,6 +219,15 @@ export default async function ParadePage({ params }: ParadePageProps) {
             </form>
           </div>
         </Card>
+
+        <Card title="Route & Operations Setup">
+          <p>View the parade route, set its operating corridor, and place start, finish, intermediate, and dispersal checkpoints.</p>
+          <div className="mt-5">
+            <Link href={`/organizations/${slug}/parades/${eventId}/route`}>
+              <Button variant="secondary">Open Route Setup</Button>
+            </Link>
+          </div>
+        </Card>
       </div>
     </AppShell>
   );

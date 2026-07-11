@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { requireAccessibleEventContext } from "@/lib/organizations/access";
 import Link from "next/link";
+import { VEHICLE_TYPE_OPTIONS } from "@/lib/entries/vehicleTypes";
 import { createEntry } from "./actions";
 
 type NewEntryPageProps = {
@@ -63,6 +64,15 @@ export default async function NewEntryPage({ params }: NewEntryPageProps) {
               <option value="sponsor">Sponsor</option>
               <option value="other">Other</option>
             </select>
+          </label>
+
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-slate-300">Vehicle Type <span className="font-normal text-slate-500">(optional)</span></span>
+            <select name="vehicleType" defaultValue="" className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white">
+              <option value="">Not specified</option>
+              {VEHICLE_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <span className="text-xs text-slate-500">Operational vehicle or movement type; this is separate from the entry category above.</span>
           </label>
 
           <div className="grid gap-5 md:grid-cols-2">

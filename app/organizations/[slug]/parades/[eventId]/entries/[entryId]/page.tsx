@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { requireAccessibleEventContext } from "@/lib/organizations/access";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { assignStagingSpot, deleteEntry } from "./actions";
+import { formatVehicleType } from "@/lib/entries/vehicleTypes";
 
 type EntryDetailPageProps = {
   params: Promise<{
@@ -75,6 +76,7 @@ export default async function EntryDetailPage({ params }: EntryDetailPageProps) 
 
         <Card title="Entry Details">
           <p>Type: {entry.entry_type}</p>
+          <p>Vehicle Type: {formatVehicleType(entry.vehicle_type)}</p>
           <p>Status: {entry.status}</p>
           <p>Estimated Length: {entry.estimated_length_feet || "Not set"} ft</p>
         </Card>

@@ -64,7 +64,7 @@ export default async function ParticipantPage({
   const { data: entry, error } = await supabase
     .from("entries")
     .select(
-      "id, name, event_id, parade_number, lineup_position, check_in_status, staging_spots(spot_code, section, street_name, latitude, longitude, geofence_radius_feet)"
+      "id, name, event_id, parade_number, lineup_position, check_in_status, route_state, staging_spots(spot_code, section, street_name, latitude, longitude, geofence_radius_feet)"
     )
     .eq("id", payload.entryId)
     .single();
@@ -203,6 +203,7 @@ export default async function ParticipantPage({
             geofenceRadiusFeet={geofenceRadiusFeet}
             initialLastGpsUpdate={latestLocationUpdate?.created_at || null}
             directionsHref={directionsHref}
+            initialRouteState={entry.route_state}
           />
         </div>
 
