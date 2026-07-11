@@ -24,7 +24,8 @@ type MarkerRecord = {
   marker: mapboxgl.Marker;
   markerEl: HTMLDivElement;
   popup: mapboxgl.Popup;
-  geometryKey: string;
+  stagingLatitude: number;
+  stagingLongitude: number;
 };
 
 function formatStatus(status: string | null | undefined) {
@@ -78,23 +79,43 @@ function highlightSpotCard(spotId: string) {
   }, 2500);
 }
 
-function getMarkerClassName(status: ReturnType<typeof toOperationalStatus>) {
-  return [
-    "flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 text-xs font-bold text-white shadow-lg transition-transform",
-    status === "moving"
-      ? "border-emerald-100 bg-emerald-500 animate-pulse"
-      : status === "ready"
-      ? "border-green-200 bg-green-600"
-      : status === "getting_ready"
-        ? "border-yellow-200 bg-yellow-600"
-        : status === "needs_assistance"
-          ? "h-12 w-12 border-red-100 bg-red-600 ring-4 ring-red-500/60"
-          : "border-slate-200 bg-slate-600",
-  ].join(" ");
-}
+const markerBaseClasses = [
+  "flex",
+  "h-11",
+  "w-11",
+  "cursor-pointer",
+  "items-center",
+  "justify-center",
+  "rounded-full",
+  "border-2",
+  "text-xs",
+  "font-bold",
+  "text-white",
+  "shadow-lg",
+];
 
-function getSpotGeometryKey(spot: MapSpot) {
-  return [spot.id, spot.latitude, spot.longitude, spot.spot_code].join("|");
+const markerStatusClasses: Record<ReturnType<typeof toOperationalStatus>, string[]> = {
+  moving: ["border-emerald-100", "bg-emerald-500", "animate-pulse"],
+  ready: ["border-green-200", "bg-green-600"],
+  getting_ready: ["border-yellow-200", "bg-yellow-600"],
+  needs_assistance: ["border-red-100", "bg-red-600", "ring-4", "ring-red-500/60"],
+  not_checked_in: ["border-slate-200", "bg-slate-600"],
+};
+
+const paradeOneMarkerClasses = [
+  ...markerBaseClasses,
+  ...Object.values(markerStatusClasses).flat(),
+  "h-12",
+  "w-12",
+  "transition-transform",
+];
+
+function applyMarkerStatusClasses(
+  markerElement: HTMLDivElement,
+  status: ReturnType<typeof toOperationalStatus>
+) {
+  markerElement.classList.remove(...paradeOneMarkerClasses);
+  markerElement.classList.add(...markerBaseClasses, ...markerStatusClasses[status]);
 }
 
 function buildPopupHtml(spot: MapSpot, editBasePath?: string) {
@@ -126,7 +147,8 @@ export function LiveStagingMap({
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRecordsRef = useRef<Map<string, MarkerRecord>>(new Map());
-  const hasFitBoundsRef = useRef(false);
+  const initialSpotsRef = useRef(spots);
+  const visibleSpotSetKeyRef = useRef("");
 
   useEffect(() => {
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -135,9 +157,13 @@ export function LiveStagingMap({
 
     mapboxgl.accessToken = token;
 
-    const validSpots = spots.filter(
+    const validSpots = initialSpotsRef.current.filter(
       (spot) => spot.latitude !== null && spot.longitude !== null
     );
+    visibleSpotSetKeyRef.current = validSpots
+      .map((spot) => spot.id)
+      .sort()
+      .join("|");
 
     const center: [number, number] =
       validSpots.length > 0
@@ -154,7 +180,7 @@ export function LiveStagingMap({
     mapRef.current = map;
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-    if (validSpots.length > 1 && !hasFitBoundsRef.current) {
+    if (validSpots.length > 1) {
       const bounds = new mapboxgl.LngLatBounds();
 
       validSpots.forEach((spot) => {
@@ -165,20 +191,18 @@ export function LiveStagingMap({
         padding: 80,
         maxZoom: 17,
       });
-
-      hasFitBoundsRef.current = true;
     }
 
+    const markerRecords = markerRecordsRef.current;
     return () => {
-      markerRecordsRef.current.forEach((record) => {
+      markerRecords.forEach((record) => {
         record.marker.remove();
       });
-      markerRecordsRef.current.clear();
+      markerRecords.clear();
       map.remove();
       mapRef.current = null;
-      hasFitBoundsRef.current = false;
     };
-  }, [spots]);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -192,6 +216,8 @@ export function LiveStagingMap({
     );
 
     const visibleSpotIds = new Set(validSpots.map((spot) => spot.id));
+    const visibleSpotSetKey = [...visibleSpotIds].sort().join("|");
+    const visibleSetChanged = visibleSpotSetKeyRef.current !== visibleSpotSetKey;
 
     markerRecordsRef.current.forEach((record, spotId) => {
       if (visibleSpotIds.has(spotId)) {
@@ -205,16 +231,11 @@ export function LiveStagingMap({
     validSpots.forEach((spot) => {
       const assignedEntry = Array.isArray(spot.entries) ? spot.entries[0] : null;
       const operationalStatus = toOperationalStatus(assignedEntry?.check_in_status);
-      const geometryKey = getSpotGeometryKey(spot);
       const existingRecord = markerRecordsRef.current.get(spot.id);
 
-      if (!existingRecord || existingRecord.geometryKey !== geometryKey) {
-        if (existingRecord) {
-          existingRecord.marker.remove();
-        }
-
+      if (!existingRecord) {
         const markerEl = document.createElement("div");
-        markerEl.className = getMarkerClassName(operationalStatus);
+        applyMarkerStatusClasses(markerEl, operationalStatus);
         markerEl.textContent = spot.spot_code;
         markerEl.addEventListener("click", () => {
           highlightSpotCard(spot.id);
@@ -233,15 +254,37 @@ export function LiveStagingMap({
           marker,
           markerEl,
           popup,
-          geometryKey,
+          stagingLatitude: spot.latitude!,
+          stagingLongitude: spot.longitude!,
         });
         return;
       }
 
-      existingRecord.markerEl.className = getMarkerClassName(operationalStatus);
+      const geometryChanged =
+        existingRecord.stagingLongitude !== spot.longitude ||
+        existingRecord.stagingLatitude !== spot.latitude;
+
+      if (geometryChanged) {
+        existingRecord.marker.setLngLat([spot.longitude!, spot.latitude!]);
+        existingRecord.stagingLongitude = spot.longitude!;
+        existingRecord.stagingLatitude = spot.latitude!;
+      }
+      applyMarkerStatusClasses(existingRecord.markerEl, operationalStatus);
       existingRecord.markerEl.textContent = spot.spot_code;
       existingRecord.popup.setHTML(buildPopupHtml(spot, editBasePath));
     });
+
+    if (visibleSetChanged) {
+      visibleSpotSetKeyRef.current = visibleSpotSetKey;
+
+      if (validSpots.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds();
+        validSpots.forEach((spot) => {
+          bounds.extend([spot.longitude!, spot.latitude!]);
+        });
+        map.fitBounds(bounds, { padding: 80, maxZoom: 17 });
+      }
+    }
   }, [spots, editBasePath]);
 
   useEffect(() => {

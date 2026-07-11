@@ -12,6 +12,7 @@ type MissionControlOperationalStatus =
 type UpdateMissionControlStatusRequest = {
   organizationId?: unknown;
   eventId?: unknown;
+  entryId?: unknown;
   entryNumber?: unknown;
   status?: unknown;
 };
@@ -119,12 +120,13 @@ export async function POST(request: Request) {
 
   const organizationId = String(payload?.organizationId || "").trim();
   const eventId = String(payload?.eventId || "").trim();
+  const entryId = String(payload?.entryId || "").trim();
   const entryNumber = parseEntryNumber(payload?.entryNumber);
   const status = parseOperationalStatus(payload?.status);
 
-  if (!organizationId || !eventId || !entryNumber || !status) {
+  if (!organizationId || !eventId || (!entryId && !entryNumber) || !status) {
     return NextResponse.json(
-      { ok: false, error: "Organization, event, entry number, and status are required." },
+      { ok: false, error: "Organization, event, entry, and status are required." },
       { status: 400 }
     );
   }
@@ -136,15 +138,19 @@ export async function POST(request: Request) {
 
   const supabase = context.supabase;
 
-  const { data: entry, error: entryError } = await supabase
+  let entryQuery = supabase
     .from("entries")
-    .select("id")
-    .eq("event_id", eventId)
-    .eq("parade_number", entryNumber)
-    .maybeSingle();
+    .select("id, parade_number")
+    .eq("event_id", eventId);
+
+  entryQuery = entryId
+    ? entryQuery.eq("id", entryId)
+    : entryQuery.eq("parade_number", entryNumber!);
+
+  const { data: entry, error: entryError } = await entryQuery.maybeSingle();
 
   if (entryError || !entry) {
-    return NextResponse.json({ ok: false, error: "Entry not found for that number." }, { status: 404 });
+    return NextResponse.json({ ok: false, error: "Entry not found." }, { status: 404 });
   }
 
   const updatePayload: {
@@ -174,7 +180,8 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
+    entryId: entry.id,
     status,
-    entryNumber,
+    entryNumber: entry.parade_number,
   });
 }

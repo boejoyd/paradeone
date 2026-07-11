@@ -5,6 +5,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
@@ -34,6 +35,9 @@ type ParadeUnit = {
   status: MissionControlOperationalStatus;
   rawStatus: string | null;
 };
+
+type UnitSortKey = "name" | "organization" | "stagingSpot" | "entryNumber" | "eta" | "status";
+type SortDirection = "ascending" | "descending";
 
 type ChatMessage = {
   id: string;
@@ -90,6 +94,22 @@ type MissionControlConsoleProps = {
 };
 
 type DragAxis = "vertical" | "horizontal" | "units-bottom";
+
+const desktopWorkspaceQuery = "(min-width: 1280px)";
+
+function subscribeToDesktopWorkspace(onChange: () => void) {
+  const mediaQuery = window.matchMedia(desktopWorkspaceQuery);
+  mediaQuery.addEventListener("change", onChange);
+  return () => mediaQuery.removeEventListener("change", onChange);
+}
+
+function getDesktopWorkspaceSnapshot() {
+  return window.matchMedia(desktopWorkspaceQuery).matches;
+}
+
+function getDesktopWorkspaceServerSnapshot() {
+  return false;
+}
 
 const WORKSPACE_SPLIT_STORAGE_KEY = "mission-control.workspace.splits.v3";
 
@@ -341,6 +361,10 @@ function MissionControlUnitsPanel({
   const [rowErrorEntryId, setRowErrorEntryId] = useState<string | null>(null);
   const [rowWarning, setRowWarning] = useState<string | null>(null);
   const [rowWarningEntryId, setRowWarningEntryId] = useState<string | null>(null);
+  const [unitSort, setUnitSort] = useState<{
+    key: UnitSortKey;
+    direction: SortDirection;
+  } | null>(null);
 
   const liveUnits: ParadeUnit[] = liveMapSpots.flatMap((spot) => {
     const entries = Array.isArray(spot.entries) ? spot.entries : [];
@@ -364,6 +388,71 @@ function MissionControlUnitsPanel({
           ...unit,
           rawStatus: unit.rawStatus ?? unit.status,
         }));
+
+  const sortedUnits = unitSort
+    ? units
+        .map((unit, originalIndex) => ({ unit, originalIndex }))
+        .sort((left, right) => {
+          const leftValue = left.unit[unitSort.key];
+          const rightValue = right.unit[unitSort.key];
+          const leftMissing = leftValue === null || leftValue === undefined || leftValue === "";
+          const rightMissing = rightValue === null || rightValue === undefined || rightValue === "";
+
+          if (leftMissing !== rightMissing) {
+            return leftMissing ? 1 : -1;
+          }
+
+          if (leftMissing && rightMissing) {
+            return left.originalIndex - right.originalIndex;
+          }
+
+          const comparison =
+            typeof leftValue === "number" && typeof rightValue === "number"
+              ? leftValue - rightValue
+              : String(leftValue).localeCompare(String(rightValue), undefined, {
+                  numeric: true,
+                  sensitivity: "base",
+                });
+
+          if (comparison === 0) {
+            return left.originalIndex - right.originalIndex;
+          }
+
+          return unitSort.direction === "ascending" ? comparison : -comparison;
+        })
+        .map(({ unit }) => unit)
+    : units;
+
+  const toggleUnitSort = (key: UnitSortKey) => {
+    setUnitSort((current) =>
+      current?.key === key
+        ? {
+            key,
+            direction: current.direction === "ascending" ? "descending" : "ascending",
+          }
+        : { key, direction: "ascending" }
+    );
+  };
+
+  const sortableHeader = (key: UnitSortKey, label: string) => {
+    const active = unitSort?.key === key;
+    const ariaSort: "none" | SortDirection = active ? unitSort.direction : "none";
+
+    return (
+      <th aria-sort={ariaSort} className="px-3 py-2.5 font-medium md:px-4">
+        <button
+          type="button"
+          onClick={() => toggleUnitSort(key)}
+          className="inline-flex items-center gap-1.5 rounded text-left transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+        >
+          <span>{label}</span>
+          <span aria-hidden="true" className={active ? "text-blue-300" : "text-slate-600"}>
+            {active ? (unitSort.direction === "ascending" ? "▲" : "▼") : "↕"}
+          </span>
+        </button>
+      </th>
+    );
+  };
 
   const canPushOff = (unit: ParadeUnit) => {
     if (unit.status !== "ready" && unit.status !== "getting_ready") {
@@ -438,17 +527,17 @@ function MissionControlUnitsPanel({
         <table className="min-w-full divide-y divide-slate-800/70 text-left text-sm">
           <thead className="sticky top-0 bg-slate-950/95 text-slate-300 backdrop-blur">
             <tr>
-              <th className="px-3 py-2.5 font-medium md:px-4">Unit</th>
-              <th className="px-3 py-2.5 font-medium md:px-4">Section</th>
-              <th className="px-3 py-2.5 font-medium md:px-4">Staging</th>
-              <th className="px-3 py-2.5 font-medium md:px-4">Entry #</th>
-              <th className="px-3 py-2.5 font-medium md:px-4">ETA</th>
-              <th className="px-3 py-2.5 font-medium md:px-4">Status</th>
+              {sortableHeader("name", "Unit")}
+              {sortableHeader("organization", "Section")}
+              {sortableHeader("stagingSpot", "Staging")}
+              {sortableHeader("entryNumber", "Entry #")}
+              {sortableHeader("eta", "ETA")}
+              {sortableHeader("status", "Status")}
               <th className="px-3 py-2.5 font-medium md:px-4">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/70 text-slate-300">
-            {units.map((unit) => (
+            {sortedUnits.map((unit) => (
               <tr key={unit.id} className="align-top bg-slate-950/20">
                 <td className="px-3 py-2.5 font-semibold text-white md:px-4">{unit.name}</td>
                 <td className="px-3 py-2.5 md:px-4">{unit.organization}</td>
@@ -487,10 +576,12 @@ function MissionControlUnitsPanel({
 
 function MissionControlChatPanelWithData({
   dedicated,
+  liveMapSpots,
   communications,
   onStatusUpdate,
 }: {
   dedicated: boolean;
+  liveMapSpots: MissionControlMapSpot[];
   communications?: MissionControlConsoleProps["communications"];
   onStatusUpdate?: (update: {
     entryId?: string;
@@ -507,9 +598,63 @@ function MissionControlChatPanelWithData({
   const [statusError, setStatusError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [unitQuery, setUnitQuery] = useState("");
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [unitResultsOpen, setUnitResultsOpen] = useState(false);
+  const [activeUnitIndex, setActiveUnitIndex] = useState(0);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const entryNumberRef = useRef<HTMLInputElement | null>(null);
+
+  const searchableUnits = liveMapSpots.flatMap((spot) =>
+    (Array.isArray(spot.entries) ? spot.entries : []).map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      paradeNumber: entry.parade_number,
+      section: spot.section,
+      stagingSpot: spot.spot_code,
+    }))
+  );
+  const normalizedUnitQuery = unitQuery.trim().toLocaleLowerCase();
+  const matchingUnits = searchableUnits
+    .filter((unit) => {
+      if (!normalizedUnitQuery) return true;
+      return (
+        unit.name.toLocaleLowerCase().includes(normalizedUnitQuery) ||
+        (unit.paradeNumber !== null && String(unit.paradeNumber).includes(normalizedUnitQuery))
+      );
+    })
+    .slice(0, 8);
+
+  const selectUnit = (unit: (typeof searchableUnits)[number]) => {
+    setSelectedEntryId(unit.id);
+    setUnitQuery(unit.name);
+    setUnitResultsOpen(false);
+    setActiveUnitIndex(0);
+    setStatusError(null);
+  };
+
+  const handleUnitKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      setUnitResultsOpen(false);
+      return;
+    }
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setUnitResultsOpen(true);
+      setActiveUnitIndex((current) => {
+        if (matchingUnits.length === 0) return 0;
+        const delta = event.key === "ArrowDown" ? 1 : -1;
+        return (current + delta + matchingUnits.length) % matchingUnits.length;
+      });
+      return;
+    }
+
+    if (event.key === "Enter" && unitResultsOpen && matchingUnits[activeUnitIndex]) {
+      event.preventDefault();
+      selectUnit(matchingUnits[activeUnitIndex]);
+    }
+  };
 
   const hasContext = Boolean(communications?.organizationId);
   const hasDbMessages = messages.length > 0;
@@ -635,9 +780,8 @@ function MissionControlChatPanelWithData({
       return;
     }
 
-    const parsedEntryNumber = Number(entryNumberRef.current?.value || "");
-    if (!Number.isFinite(parsedEntryNumber) || parsedEntryNumber < 1) {
-      setStatusError("Enter an entry number before setting a status.");
+    if (!selectedEntryId) {
+      setStatusError("Select a parade unit before setting a status.");
       return;
     }
 
@@ -653,13 +797,13 @@ function MissionControlChatPanelWithData({
         body: JSON.stringify({
           organizationId: communications.organizationId,
           eventId: communications.eventId,
-          entryNumber: Math.trunc(parsedEntryNumber),
+          entryId: selectedEntryId,
           status,
         }),
       });
 
       const payload = (await response.json().catch(() => null)) as
-        | { ok: true; entryNumber: number; status: MissionControlOperationalStatus }
+        | { ok: true; entryId: string; entryNumber: number | null; status: MissionControlOperationalStatus }
         | { ok: false; error?: string }
         | null;
 
@@ -668,9 +812,12 @@ function MissionControlChatPanelWithData({
       }
 
       onStatusUpdate?.({
-        entryNumber: payload.entryNumber,
+        entryId: payload.entryId,
         status: payload.status,
       });
+      setSelectedEntryId(null);
+      setUnitQuery("");
+      setUnitResultsOpen(false);
     } catch (error) {
       setStatusError(error instanceof Error ? error.message : "Unable to update status.");
     } finally {
@@ -757,15 +904,52 @@ function MissionControlChatPanelWithData({
             <input type="hidden" name="senderName" value={channelSenderName} />
 
             <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-              <input
-                ref={entryNumberRef}
-                name="entryNumber"
-                type="number"
-                min={1}
-                placeholder="Entry #"
-                className="h-8 min-h-8 w-24 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs leading-5 text-white"
-                disabled={isUpdatingStatus}
-              />
+              <div className="relative min-w-48 flex-1 sm:max-w-xs">
+                <input
+                  type="text"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={unitResultsOpen}
+                  aria-controls="mission-control-unit-results"
+                  aria-activedescendant={unitResultsOpen && matchingUnits[activeUnitIndex] ? `mission-control-unit-${matchingUnits[activeUnitIndex].id}` : undefined}
+                  value={unitQuery}
+                  onChange={(event) => {
+                    setUnitQuery(event.target.value);
+                    setSelectedEntryId(null);
+                    setUnitResultsOpen(true);
+                    setActiveUnitIndex(0);
+                  }}
+                  onFocus={() => setUnitResultsOpen(true)}
+                  onBlur={() => setUnitResultsOpen(false)}
+                  onKeyDown={handleUnitKeyDown}
+                  placeholder="Search unit or parade #"
+                  className="h-8 min-h-8 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs leading-5 text-white"
+                  disabled={isUpdatingStatus}
+                />
+                {unitResultsOpen ? (
+                  <div id="mission-control-unit-results" role="listbox" className="absolute bottom-full left-0 z-30 mb-1 max-h-52 w-full overflow-auto rounded-md border border-slate-700 bg-slate-950 p-1 shadow-2xl">
+                    {matchingUnits.length > 0 ? matchingUnits.map((unit, index) => (
+                      <button
+                        key={unit.id}
+                        id={`mission-control-unit-${unit.id}`}
+                        type="button"
+                        role="option"
+                        aria-selected={selectedEntryId === unit.id}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => selectUnit(unit)}
+                        className={["block w-full rounded px-2 py-1.5 text-left text-xs", index === activeUnitIndex ? "bg-blue-600 text-white" : "text-slate-200 hover:bg-slate-800"].join(" ")}
+                      >
+                        <span className="block font-semibold">{unit.name}</span>
+                        <span className="block text-[11px] opacity-75">
+                          {unit.paradeNumber !== null ? `#${unit.paradeNumber}` : "No parade number"} · {unit.section || "No section"} · {unit.stagingSpot}
+                        </span>
+                      </button>
+                    )) : (
+                      <p className="px-2 py-2 text-xs text-slate-400">No matching units.</p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
               <button
                 type="button"
                 onClick={() => applyStatusUpdate("ready")}
@@ -896,6 +1080,7 @@ function renderPanel(
       return (
         <MissionControlChatPanelWithData
           dedicated={dedicated}
+          liveMapSpots={mapProps.liveMapSpots}
           communications={communications}
           onStatusUpdate={onStatusUpdate}
         />
@@ -1003,6 +1188,12 @@ export function MissionControlConsole({
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const unitsPaneRef = useRef<HTMLDivElement | null>(null);
   const isCombined = view === "combined";
+  const isDesktopWorkspace = useSyncExternalStore(
+    subscribeToDesktopWorkspace,
+    getDesktopWorkspaceSnapshot,
+    getDesktopWorkspaceServerSnapshot
+  );
+  const mapIsExpanded = expandedPanel === "map";
   const focusedPanel = isCombined ? null : view;
   const statusOrganizationId = statusContext?.organizationId ?? communications?.organizationId;
   const statusEventId = statusContext?.eventId ?? communications?.eventId;
@@ -1079,9 +1270,14 @@ export function MissionControlConsole({
 
           return spotChanged
             ? {
-                ...spot,
-                entries: nextEntries,
-              }
+                  id: spot.id,
+                  spot_code: spot.spot_code,
+                  section: spot.section,
+                  street_name: spot.street_name,
+                  latitude: spot.latitude,
+                  longitude: spot.longitude,
+                  entries: nextEntries,
+                }
             : spot;
         });
 
@@ -1111,20 +1307,34 @@ export function MissionControlConsole({
           return spot;
         }
 
-        const updatedEntries = spot.entries.map((entry) =>
-          update.entryId
+        let spotChanged = false;
+        const updatedEntries = spot.entries.map((entry) => {
+          const matches = update.entryId
             ? entry.id === update.entryId
-              ? { ...entry, check_in_status: update.status }
-              : entry
-            : entry.parade_number === update.entryNumber
-              ? { ...entry, check_in_status: update.status }
-              : entry
-        );
+            : entry.parade_number === update.entryNumber;
+
+          if (!matches || entry.check_in_status === update.status) {
+            return entry;
+          }
+
+          spotChanged = true;
+          return { ...entry, check_in_status: update.status };
+        });
+
+        if (!spotChanged) {
+          return spot;
+        }
 
         return {
-          ...spot,
+          id: spot.id,
+          spot_code: spot.spot_code,
+          section: spot.section,
+          street_name: spot.street_name,
+          latitude: spot.latitude,
+          longitude: spot.longitude,
           entries: updatedEntries,
         };
+
       })
     );
   };
@@ -1242,13 +1452,14 @@ export function MissionControlConsole({
             </p>
           </div>
 
-          <div className="space-y-4 xl:hidden">
+          {!isDesktopWorkspace && !mapIsExpanded ? (
+          <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-[1.3fr_0.7fr]">
               <MissionControlPanelShell
                 panel="map"
                 dedicated={false}
                 onFullScreen={setExpandedPanel}
-                active={expandedPanel === "map"}
+                active={false}
                 liveMapSpots={runtimeSpots}
                 liveMapEditBasePath={liveMapEditBasePath}
                 activeParadeLabel={activeParadeLabel}
@@ -1261,6 +1472,7 @@ export function MissionControlConsole({
                 dedicated={false}
                 onFullScreen={setExpandedPanel}
                 active={expandedPanel === "chat"}
+                liveMapSpots={runtimeSpots}
                 statusContext={statusContext}
                 communications={communications}
                 onStatusUpdate={handleStatusUpdate}
@@ -1277,11 +1489,13 @@ export function MissionControlConsole({
               onStatusUpdate={handleStatusUpdate}
             />
           </div>
+          ) : null}
 
+          {isDesktopWorkspace && !mapIsExpanded ? (
           <div
             ref={workspaceRef}
             className={[
-              "hidden min-h-0 xl:grid",
+              "grid min-h-0",
               dragAxis ? "select-none" : "",
             ].join(" ")}
             style={{
@@ -1294,7 +1508,7 @@ export function MissionControlConsole({
                 panel="map"
                 dedicated={false}
                 onFullScreen={setExpandedPanel}
-                active={expandedPanel === "map"}
+                active={false}
                 liveMapSpots={runtimeSpots}
                 liveMapEditBasePath={liveMapEditBasePath}
                 activeParadeLabel={activeParadeLabel}
@@ -1316,6 +1530,7 @@ export function MissionControlConsole({
                 dedicated={false}
                 onFullScreen={setExpandedPanel}
                 active={expandedPanel === "chat"}
+                liveMapSpots={runtimeSpots}
                 statusContext={statusContext}
                 communications={communications}
                 onStatusUpdate={handleStatusUpdate}
@@ -1352,8 +1567,9 @@ export function MissionControlConsole({
               </div>
             </div>
           </div>
+          ) : null}
         </div>
-      ) : focusedPanel ? (
+      ) : focusedPanel && !mapIsExpanded ? (
         <div className="h-[calc(100dvh-6.25rem)] min-h-0">
           <div className="h-full min-h-0 overflow-hidden">
             <MissionControlPanelShell
