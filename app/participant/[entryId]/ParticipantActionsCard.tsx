@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type ParticipantActionsCardProps = {
   token: string;
@@ -11,6 +11,7 @@ type ParticipantActionsCardProps = {
   initialLastGpsUpdate: string | null;
   directionsHref: string | null;
   initialRouteState: string;
+  onRouteStateChange?: (routeState: string, routeCompletedAt?: string | null) => void;
 };
 
 type LocationPayload = {
@@ -48,6 +49,7 @@ export function ParticipantActionsCard({
   initialLastGpsUpdate,
   directionsHref,
   initialRouteState,
+  onRouteStateChange,
 }: ParticipantActionsCardProps) {
   const [status, setStatus] = useState<string>("Not Checked In");
   const [isSharing, setIsSharing] = useState(false);
@@ -57,6 +59,11 @@ export function ParticipantActionsCard({
   const [checkInMessage, setCheckInMessage] = useState<string | null>(null);
   const [isSubmittingCheckIn, setIsSubmittingCheckIn] = useState(false);
   const [routeState, setRouteState] = useState(initialRouteState);
+  const watchIdRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (watchIdRef.current !== null && typeof navigator !== "undefined") navigator.geolocation.clearWatch(watchIdRef.current);
+  }, []);
 
   const formattedLastGpsUpdate = useMemo(
     () => formatTimestamp(lastGpsUpdate),
@@ -98,7 +105,9 @@ export function ParticipantActionsCard({
       return;
     }
 
-    navigator.geolocation.watchPosition(
+    if (watchIdRef.current !== null) return;
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
       async (position) => {
         const latitude = position.coords.latitude;
         const longitude = position.coords.longitude;
@@ -125,13 +134,16 @@ export function ParticipantActionsCard({
         }
 
         const payload = (await response.json().catch(() => null)) as
-          | { updatedAt?: string; routeState?: string }
+          | { updatedAt?: string; routeState?: string; routeCompletedAt?: string | null }
           | null;
 
         setIsSharing(true);
         setCurrentLocation({ latitude, longitude, updatedAt: payload?.updatedAt || new Date().toISOString() });
         setLastGpsUpdate(payload?.updatedAt || new Date().toISOString());
-        if (payload?.routeState) setRouteState(payload.routeState);
+        if (payload?.routeState) {
+          setRouteState(payload.routeState);
+          onRouteStateChange?.(payload.routeState, payload.routeCompletedAt);
+        }
       },
       (error) => {
         if (error.code === error.PERMISSION_DENIED) {

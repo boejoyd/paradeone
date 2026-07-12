@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
   const { data: entry, error: entryError } = await supabase
     .from("entries")
-    .select("id, event_id, staging_spot_id, pushed_off_at, route_state, route_candidate_state, route_candidate_count, route_candidate_since, finish_confirmed_at")
+    .select("id, event_id, staging_spot_id, pushed_off_at, route_state, route_completed_at, route_candidate_state, route_candidate_count, route_candidate_since, finish_confirmed_at")
     .eq("id", participantToken.entryId)
     .single();
 
@@ -82,6 +82,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: entryUpdateError.message }, { status: 500 });
   }
 
+  if (entry.route_state === "completed") {
+    return NextResponse.json({ ok: true, routeState: "completed", routeCompletedAt: entry.route_completed_at, readingQualified: false });
+  }
+
   let routeState = entry.route_state as RouteState;
   if (accuracy <= MAX_ROUTE_GPS_ACCURACY_METERS) {
     routeState = await evaluateRouteStateForLocation({
@@ -98,5 +102,6 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json({ ok: true, updatedAt, routeState, readingQualified: accuracy <= MAX_ROUTE_GPS_ACCURACY_METERS });
+  const { data: durableState } = await supabase.from("entries").select("route_state, route_completed_at").eq("id", entry.id).eq("event_id", entry.event_id).single();
+  return NextResponse.json({ ok: true, updatedAt, routeState: durableState?.route_state || routeState, routeCompletedAt: durableState?.route_completed_at || null, readingQualified: accuracy <= MAX_ROUTE_GPS_ACCURACY_METERS });
 }
