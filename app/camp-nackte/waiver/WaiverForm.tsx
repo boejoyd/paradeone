@@ -4,294 +4,174 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 
-const WAIVER_TEXT = `Before your visit, please review and sign the waiver below. This helps us keep the check-in process quick and ensures everyone understands the campground policies.
+import { CAMP_NACKTE_WAIVER_TEXT, CAMP_NACKTE_WAIVER_VERSION } from "@/lib/campNackteWaiver";
 
-# Camp Nackte Waiver, Assumption of Risk, and Release of Liability
+type LookupResult = {
+  lookupToken: string;
+  visitDate?: string | null;
+  guest: { preferredName: string | null; legalNameHint: string; maskedEmail: string | null; maskedPhone: string | null };
+  currentWaiver: { signed_at: string; expires_at: string; confirmation_number: string } | null;
+};
 
-## Assumption of Risk
-I voluntarily choose to enter Camp Nackte and participate in camping, hiking, swimming, use of the pool, hot tub, jacuzzi, fire pit, recreational activities, social activities, spectating, and all other activities available on the property.
-I understand that these activities involve inherent risks that cannot be completely eliminated and may result in serious personal injury, illness, permanent disability, death, emotional distress, or damage to personal property.
-These risks include, but are not limited to:
-* Falls
-* Uneven terrain
-* Tree roots, stumps, rocks, ditches, and natural obstacles
-* Wildlife, snakes, spiders, insects, and other animals
-* Fire and burns
-* Water-related accidents
-* Weather conditions
-* Construction areas
-* Theft or vandalism
-* Equipment failure
-* The acts or negligence of myself or other guests
-* Any other known or unknown hazards associated with outdoor recreation.
-I knowingly and voluntarily assume all risks, whether known or unknown.
-
-## Release of Liability
-In consideration for being permitted to enter Camp Nackte, I release and forever discharge Nackte LLC, its members, managers, owners, employees, volunteers, agents, affiliates, successors, assigns, representatives, and the owners of any property where Camp Nackte operates from any claims, demands, causes of action, damages, losses, or liabilities arising out of or related to my presence on the property or participation in any activity, including claims arising from the ordinary negligence of Nackte LLC or its representatives, to the fullest extent permitted by Texas law.
-This release includes claims involving bodily injury, illness, disability, death, emotional distress, and loss or damage to personal property.
-This release does not waive liability for conduct that cannot legally be waived under applicable law.
-
-## Indemnification
-I agree to indemnify and hold harmless Nackte LLC and the property owners from claims, damages, liabilities, or expenses arising from my own actions, negligence, or violation of campground rules, including reasonable attorney's fees where permitted by law.
-
-## Camp Facilities
-I understand that the pool, hot tub, jacuzzi, showers, fire pit, and other recreational amenities are unsupervised.
-I agree to use all facilities safely, follow posted rules, use designated entrances and exits, and exercise reasonable care while using any campground amenity.
-I assume all risks associated with using these facilities.
-
-## Nature of the Campground
-I understand that Camp Nackte is an LGBTQIA+ safe space dedicated to providing a respectful, welcoming environment for all guests regardless of race, religion, language, country of origin, sex, sexual orientation, or gender identity.
-I understand that Camp Nackte is clothing optional only in designated areas and that adults may be nude. I acknowledge this before entering the property and understand that lawful adult nudity may be visible during my visit.
-
-## Photography Policy
-Photography and video recording are permitted only in designated areas and only with the verbal consent of every identifiable person appearing in the image, including anyone in the background.
-If Camp Nackte determines that any photograph violates this policy, I agree to permanently delete all copies of that photograph.
-I understand that despite these policies, I may inadvertently appear in the background of another guest's approved photograph. I release Camp Nackte from liability arising solely from such incidental appearances.
-If I voluntarily participate in an official Camp Nackte promotional photo or video session, I grant Camp Nackte permission to use my likeness in photographs, videos, and other media for lawful promotional purposes without compensation. I waive any right to inspect or approve the finished materials and understand that no royalties or additional compensation will be paid.
-
-## Camp Rules
-I agree that:
-* No person under eighteen (18) years of age may enter the property.
-* I will not possess or use illegal drugs on the property.
-* Pets must remain leashed and under my control at all times.
-* I will follow all posted campground rules and staff instructions.
-* Camp Nackte is clothing optional only in designated areas.
-* Weather conditions do not qualify for refunds.
-
-## Vendors and Independent Contractors
-I understand that vendors, entertainers, instructors, contractors, and other independent businesses may occasionally operate on the property.
-I acknowledge that these parties are responsible for their own services, and I release Camp Nackte from liability arising solely from the acts or omissions of independent third parties that are not under Camp Nackte's control.
-
-## Health
-I certify that I am not knowingly experiencing symptoms of a contagious illness that would place other guests at unreasonable risk.
-If I become ill during my visit, I agree to leave the campground promptly and notify management if appropriate.
-
-## Membership
-If I purchase a membership, this agreement shall remain effective for one (1) year from the date it is signed unless replaced by a newer agreement.
-
-## General Provisions
-This agreement shall be governed by the laws of the State of Texas.
-If any provision of this agreement is found unenforceable, the remaining provisions shall remain in full force and effect.
-This document constitutes the entire agreement regarding assumption of risk and release of liability between the parties.
-By signing below, I certify that I have carefully read this agreement, understand its contents, understand that I am giving up certain legal rights, including the right to bring certain claims against Nackte LLC, and voluntarily agree to all of its terms.
-
-I understand this is a legally binding agreement and that I have had the opportunity to ask questions before signing.`;
-
-function WaiverTextBlock() {
-  return (
-    <article className="rounded-3xl bg-white p-6 text-slate-950 shadow-2xl md:p-10">
-      <div className="mx-auto max-w-3xl">
-        <h2 className="text-3xl font-bold tracking-tight">
-          Nackte LLC Waiver
-        </h2>
-
-        <p className="mt-3 border-b border-slate-200 pb-6 text-base text-slate-600">
-          Please read this waiver carefully before signing.
-        </p>
-
-        <div className="mt-8 whitespace-pre-wrap text-[17px] leading-9 text-slate-800">
-          {WAIVER_TEXT}
-        </div>
-      </div>
-    </article>
-  );
-}
+type AmbiguousLookupResult = {
+  found: false;
+  ambiguous: true;
+  ambiguityToken: string;
+  message: string;
+};
 
 export function CampNackteWaiverForm() {
   const router = useRouter();
   const signatureRef = useRef<SignatureCanvas | null>(null);
+  const [lookupType, setLookupType] = useState("phone");
+  const [lookupValue, setLookupValue] = useState("");
+  const [result, setResult] = useState<LookupResult | null>(null);
   const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [ambiguityToken, setAmbiguityToken] = useState<string | null>(null);
 
-  function clearSignature() {
-    signatureRef.current?.clear();
+  async function lookup(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); setMessage(""); setResult(null);
+    const formData = new FormData(event.currentTarget);
+    const submittedLookupType = String(formData.get("lookupType") || "");
+    const submittedLookupValue = String(formData.get("lookupValue") || "");
+    const response = await fetch("/camp-nackte/waiver/lookup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lookupType: submittedLookupType, lookupValue: submittedLookupValue }) });
+    const payload = await response.json().catch(() => null) as ({ found: true } & LookupResult) | AmbiguousLookupResult | { found?: false; message?: string; error?: string } | null;
+    setBusy(false);
+    if (!response.ok || !payload) { setMessage(payload && "error" in payload ? payload.error || "Guest lookup failed." : "Guest lookup failed."); return; }
+    if (!payload.found && "ambiguous" in payload && payload.ambiguous) { setAmbiguityToken(payload.ambiguityToken); setShowCreateForm(false); setMessage(payload.message); return; }
+    if (!payload.found) { setMessage(payload.message || "No matching guest was found."); setShowCreateForm(true); return; }
+    setAmbiguityToken(null);
+    setShowCreateForm(false);
+    setResult(payload);
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function refineLookup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-
-    const fullName = String(formData.get("fullName") || "").trim();
-    const email = String(formData.get("email") || "").trim();
-    const phone = String(formData.get("phone") || "").trim();
-    const visitDate = String(formData.get("visitDate") || "");
-
-    if (!fullName || !visitDate || (!email && !phone)) {
-      setMessage("Please enter your name, visit date, and either email or phone.");
-      return;
-    }
-
-    if (!signatureRef.current || signatureRef.current.isEmpty()) {
-      setMessage("Please sign inside the signature box.");
-      return;
-    }
-
-    const signatureDataUrl = signatureRef.current.toDataURL("image/png");
-
-    const response = await fetch("/camp-nackte/waiver/submit", {
+    if (!ambiguityToken) return;
+    setBusy(true); setMessage("");
+    const formData = new FormData(event.currentTarget);
+    const response = await fetch("/camp-nackte/waiver/lookup", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "refine", ambiguityToken, refinementType: String(formData.get("refinementType") || ""), refinementValue: String(formData.get("refinementValue") || "") }),
+    });
+    const payload = await response.json().catch(() => null) as ({ found: true } & LookupResult) | AmbiguousLookupResult | { error?: string } | null;
+    setBusy(false);
+    if (!response.ok || !payload) { setMessage(payload && "error" in payload ? payload.error || "Unable to refine the lookup." : "Unable to refine the lookup."); return; }
+    if (!("found" in payload) || !payload.found) {
+      if ("ambiguous" in payload && payload.ambiguous) { setAmbiguityToken(payload.ambiguityToken); setMessage(payload.message); return; }
+      setMessage("No matching guest was found."); return;
+    }
+    setAmbiguityToken(null); setMessage(""); setResult(payload);
+  }
+
+  async function createGuest(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); setMessage(""); setResult(null);
+    const formData = new FormData(event.currentTarget);
+    const response = await fetch("/camp-nackte/waiver/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        fullName,
-        email,
-        phone,
-        visitDate,
-        waiverText: WAIVER_TEXT,
-        signatureDataUrl,
+        action: "create",
+        legalName: String(formData.get("legalName") || ""),
+        preferredName: String(formData.get("preferredName") || ""),
+        email: String(formData.get("email") || ""),
+        phone: String(formData.get("phone") || ""),
+        visitDate: String(formData.get("visitDate") || ""),
       }),
     });
-
-    if (!response.ok) {
-      let errorMessage = "Something went wrong saving the waiver.";
-
-      try {
-        const errorBody = await response.json();
-        errorMessage =
-          typeof errorBody?.error === "string"
-            ? errorBody.error
-            : typeof errorBody?.message === "string"
-              ? errorBody.message
-              : errorMessage;
-      } catch {
-        errorMessage = "Something went wrong saving the waiver.";
-      }
-
-      console.error("Waiver submission failed", errorMessage);
-      setMessage(errorMessage);
-      return;
-    }
-
-    router.push("/camp-nackte/waiver/thank-you");
+    const payload = await response.json().catch(() => null) as ({ found: true } & LookupResult) | { error?: string } | null;
+    setBusy(false);
+    if (!response.ok || !payload || !("found" in payload) || !payload.found) { setMessage(payload && "error" in payload ? payload.error || "Unable to create or verify the guest record." : "Unable to create or verify the guest record."); return; }
+    setShowCreateForm(false);
+    setResult(payload);
   }
 
-  return (
-    <main className="min-h-screen bg-slate-950 px-5 py-8 text-white md:px-8 md:py-12">
-      <section className="mx-auto max-w-5xl">
-        <div className="mb-8 rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
-          <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
-            Camp Nackte
-          </p>
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!result || result.currentWaiver || !signatureRef.current || signatureRef.current.isEmpty()) { setMessage("Please provide your signature."); return; }
+    setBusy(true); setMessage("");
+    const data = new FormData(event.currentTarget);
+    const response = await fetch("/camp-nackte/waiver/submit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lookupToken: result.lookupToken, visitDate: String(data.get("visitDate") || ""), signatureDataUrl: signatureRef.current.toDataURL("image/png") }) });
+    const payload = await response.json().catch(() => null) as { error?: string; confirmationNumber?: string; expiresAt?: string; pdfUrl?: string } | null;
+    setBusy(false);
+    if (!response.ok) { setMessage(payload?.error || "Unable to save the waiver."); return; }
+    const params = new URLSearchParams();
+    if (payload?.confirmationNumber) params.set("confirmation", payload.confirmationNumber);
+    if (payload?.expiresAt) params.set("expiresAt", payload.expiresAt);
+    if (payload?.pdfUrl) params.set("pdf", payload.pdfUrl);
+    router.push(`/camp-nackte/waiver/thank-you?${params.toString()}`);
+  }
 
-          <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
-            Welcome to Camp Nackte
-          </h1>
+  return <main className="min-h-screen bg-slate-950 px-5 py-8 text-white md:px-8 md:py-12">
+    <section className="mx-auto max-w-5xl space-y-8">
+      <header className="rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
+        <p className="text-sm uppercase tracking-[0.4em] text-slate-400">Camp Nackte</p>
+        <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">Annual Guest Waiver</h1>
+        <p className="mt-4 text-lg text-slate-300">Verify your guest record first. You only need to sign when your annual waiver is not current.</p>
+      </header>
 
-          <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-300">
-            Before your visit, please review and sign the waiver below. This
-            helps us keep check-in quick and ensures everyone understands the
-            campground policies.
-          </p>
+      {!result ? <form onSubmit={lookup} className="rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
+        <h2 className="text-2xl font-bold">Find your guest record</h2>
+        <p className="mt-2 text-sm text-slate-400">Your information is used only to locate your record. No public guest list is shown.</p>
+        <div className="mt-5 grid gap-4 md:grid-cols-[220px_1fr_auto]">
+          <select name="lookupType" value={lookupType} onChange={(event) => setLookupType(event.target.value)} className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3"><option value="phone">Phone</option><option value="email">Email</option><option value="confirmation">Confirmation / pass code</option></select>
+          <input name="lookupValue" value={lookupValue} onChange={(event) => setLookupValue(event.target.value)} required type={lookupType === "email" ? "email" : "text"} className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3" />
+          <button disabled={busy} className="rounded-xl bg-blue-600 px-5 py-3 font-semibold disabled:opacity-50">{busy ? "Checking…" : "Continue"}</button>
         </div>
-
-        <form onSubmit={handleSubmit} className="grid gap-8">
-          <WaiverTextBlock />
-
+      </form> : <>
+        <section className="rounded-3xl border border-blue-800 bg-blue-950/30 p-6">
+          <p className="text-xs uppercase tracking-[0.3em] text-blue-300">Identity confirmation</p>
+          <h2 className="mt-2 text-2xl font-bold">{result.guest.preferredName || result.guest.legalNameHint}</h2>
+          <p className="mt-2 text-sm text-slate-300">Legal name: {result.guest.legalNameHint}</p>
+          {result.guest.maskedEmail ? <p className="text-sm text-slate-300">Email: {result.guest.maskedEmail}</p> : null}
+          {result.guest.maskedPhone ? <p className="text-sm text-slate-300">Phone: {result.guest.maskedPhone}</p> : null}
+          <button type="button" onClick={() => setResult(null)} className="mt-4 text-sm text-blue-300 underline">This is not me</button>
+        </section>
+        {result.currentWaiver ? <section className="rounded-3xl border border-emerald-700 bg-emerald-950/40 p-8 text-center">
+          <div className="text-4xl">✓</div><h2 className="mt-3 text-3xl font-bold">Your waiver is current</h2>
+          <p className="mt-3 text-slate-200">You do not need to sign again.</p>
+          <p className="mt-4 text-sm text-slate-300">Signed {new Date(result.currentWaiver.signed_at).toLocaleString()}</p>
+          <p className="text-sm text-slate-300">Valid until the exact anniversary: {new Date(result.currentWaiver.expires_at).toLocaleString()}</p>
+          <p className="mt-2 text-xs text-slate-400">After that exact timestamp, a new waiver is required before entering or using the property again.</p>
+        </section> : <form onSubmit={submit} className="grid gap-8">
+          <article className="rounded-3xl bg-white p-6 text-slate-950 md:p-10"><h2 className="text-3xl font-bold">Nackte LLC Waiver</h2><p className="mt-2 text-sm text-slate-500">Version {CAMP_NACKTE_WAIVER_VERSION}</p><div className="mt-8 whitespace-pre-wrap text-[17px] leading-9 text-slate-800">{CAMP_NACKTE_WAIVER_TEXT}</div></article>
           <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
-            <h2 className="text-2xl font-bold">Guest Information</h2>
-
-            <div className="mt-6 grid gap-6">
-              <label className="grid gap-2">
-                <span className="text-sm font-medium text-slate-300">
-                  Full Name *
-                </span>
-                <input
-                  name="fullName"
-                  required
-                  className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-                />
-              </label>
-
-              <div className="grid gap-5 md:grid-cols-2">
-                <label className="grid gap-2">
-                  <span className="text-sm font-medium text-slate-300">
-                    Email
-                  </span>
-                  <input
-                    name="email"
-                    type="email"
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-                  />
-                </label>
-
-                <label className="grid gap-2">
-                  <span className="text-sm font-medium text-slate-300">
-                    Phone
-                  </span>
-                  <input
-                    name="phone"
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-                  />
-                </label>
-              </div>
-
-              <p className="text-sm text-slate-400">
-                Please provide at least one: email or phone.
-              </p>
-
-              <label className="grid gap-2">
-                <span className="text-sm font-medium text-slate-300">
-                  Date Visiting Camp *
-                </span>
-                <input
-                  name="visitDate"
-                  type="date"
-                  required
-                  className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-                />
-              </label>
-            </div>
+            <label className="grid gap-2"><span>Date visiting Camp</span><input name="visitDate" type="date" required defaultValue={result.visitDate || ""} className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3" /></label>
+            <h2 className="mt-6 text-2xl font-bold">Signature</h2><div className="mt-5 overflow-hidden rounded-xl bg-white"><SignatureCanvas ref={signatureRef} canvasProps={{ className: "h-52 w-full" }} /></div>
+            <button type="button" onClick={() => signatureRef.current?.clear()} className="mt-3 text-sm text-slate-300">Clear signature</button>
+            <label className="mt-6 flex gap-3 text-sm text-slate-300"><input type="checkbox" required className="mt-1" /><span>I have read, understand, and agree to this waiver.</span></label>
           </section>
-
-          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
-            <h2 className="text-2xl font-bold">Signature</h2>
-
-            <p className="mt-3 text-sm leading-6 text-slate-300">
-              By signing below, I confirm that I have read, understand, and
-              agree to the Nackte LLC waiver.
-            </p>
-
-            <div className="mt-5 overflow-hidden rounded-xl bg-white">
-              <SignatureCanvas
-                ref={signatureRef}
-                canvasProps={{
-                  className: "h-52 w-full",
-                }}
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={clearSignature}
-              className="mt-3 text-sm font-medium text-slate-300 hover:text-white"
-            >
-              Clear signature
-            </button>
-
-            <label className="mt-6 flex gap-3 text-sm text-slate-300">
-              <input type="checkbox" required className="mt-1" />
-              <span>
-                I have read, understand, and agree to the Nackte LLC waiver.
-              </span>
-            </label>
-          </section>
-
-          <button
-            type="submit"
-            className="rounded-xl bg-blue-600 px-6 py-4 text-lg font-semibold text-white hover:bg-blue-500"
-          >
-            Submit Waiver
-          </button>
-
-          {message && (
-            <p className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-              {message}
-            </p>
-          )}
-        </form>
-      </section>
-    </main>
-  );
+          <button disabled={busy} className="rounded-xl bg-blue-600 px-6 py-4 text-lg font-semibold disabled:opacity-50">{busy ? "Saving…" : "Sign Annual Waiver"}</button>
+        </form>}
+      </>}
+      {message ? <p role="alert" className="rounded-xl border border-amber-800 bg-amber-950/40 p-4 text-amber-200">{message}</p> : null}
+      {!result && ambiguityToken ? <form onSubmit={refineLookup} className="rounded-3xl border border-amber-800 bg-amber-950/20 p-6 md:p-8">
+        <h2 className="text-2xl font-bold">Provide one more detail</h2>
+        <p className="mt-2 text-sm text-slate-300">This detail will be checked only against the possible records from your first search.</p>
+        <div className="mt-5 grid gap-4 md:grid-cols-[220px_1fr_auto]">
+          <select name="refinementType" defaultValue="email" className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3"><option value="email">Email</option><option value="phone">Phone</option><option value="confirmation">Confirmation code</option><option value="visit_date">Approximate last visit</option></select>
+          <input name="refinementValue" required placeholder="Enter one more detail" className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3" />
+          <button disabled={busy} className="rounded-xl bg-blue-600 px-5 py-3 font-semibold disabled:opacity-50">{busy ? "Checking…" : "Refine match"}</button>
+        </div>
+        <button type="button" onClick={() => { setAmbiguityToken(null); setMessage(""); }} className="mt-4 text-sm text-slate-300 underline">Start over</button>
+        <p className="mt-3 text-xs text-slate-400">If another detail cannot distinguish your record, please ask staff for assistance.</p>
+      </form> : null}
+      {!result && showCreateForm && !ambiguityToken ? <form onSubmit={createGuest} className="rounded-3xl border border-blue-800 bg-blue-950/20 p-6 md:p-8">
+        <h2 className="text-2xl font-bold">I’m not listed — create my guest record and sign a waiver</h2>
+        <p className="mt-2 text-sm text-slate-300">Enter your information below. If an exact email or phone match already exists, that guest record will be used instead of creating a duplicate.</p>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <label className="grid gap-2"><span>Legal name</span><input required name="legalName" autoComplete="name" className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3" /></label>
+          <label className="grid gap-2"><span>Preferred name <span className="text-slate-500">(optional)</span></span><input name="preferredName" className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3" /></label>
+          <label className="grid gap-2"><span>Email</span><input name="email" type="email" autoComplete="email" className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3" /></label>
+          <label className="grid gap-2"><span>Phone</span><input name="phone" type="tel" autoComplete="tel" className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3" /></label>
+          <label className="grid gap-2"><span>Date visiting Camp</span><input required name="visitDate" type="date" className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3" /></label>
+        </div>
+        <p className="mt-3 text-xs text-slate-400">Provide at least one contact method: email or phone.</p>
+        <button disabled={busy} className="mt-5 rounded-xl bg-blue-600 px-5 py-3 font-semibold disabled:opacity-50">{busy ? "Continuing…" : "Create guest and continue"}</button>
+      </form> : null}
+    </section>
+  </main>;
 }

@@ -22,7 +22,13 @@ function isPublicPath(pathname: string) {
     return true;
   }
 
-  if (pathname.startsWith("/camp-nackte/waiver")) {
+  if (
+    pathname === "/camp-nackte/waiver" ||
+    pathname === "/camp-nackte/waiver/submit" ||
+    pathname === "/camp-nackte/waiver/lookup" ||
+    pathname === "/camp-nackte/waiver/thank-you"
+    || pathname.startsWith("/camp-nackte/waiver/pdf/")
+  ) {
     return true;
   }
 

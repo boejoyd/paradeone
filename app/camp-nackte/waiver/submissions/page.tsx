@@ -1,57 +1,22 @@
-import { supabase } from "@/lib/supabase";
 import { CampNackteWaiverSubmissionsClient } from "@/components/waiver/CampNackteWaiverSubmissionsClient";
-
-type WaiverSubmission = {
-  id: string;
-  full_name: string | null;
-  email: string | null;
-  phone: string | null;
-  visit_date: string | null;
-  waiver_text: string | null;
-  signature_data_url: string | null;
-  pdf_url: string | null;
-  created_at: string | null;
-};
+import { requireUser } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export default async function CampNackteWaiverSubmissionsPage() {
-  const { data, error } = await supabase
-    .from("camp_nackte_waivers")
-    .select(
-      "id, full_name, email, phone, visit_date, waiver_text, signature_data_url, pdf_url, created_at"
-    )
-    .order("created_at", { ascending: false });
+  await requireUser();
+  const supabase = await createServerSupabaseClient();
+  const { error: expirationError } = await supabase.from("camp_nackte_waivers").update({ status: "expired" }).eq("status", "current").lte("expires_at", new Date().toISOString());
+  if (expirationError) throw new Error(expirationError.message);
+  const [{ data: waivers, error }, { data: guests, error: guestsError }, { data: purchases, error: purchasesError }, { data: slots, error: slotsError }] = await Promise.all([
+    supabase.from("camp_nackte_waivers").select("id, guest_id, full_name, email, phone, visit_date, waiver_text, signature_data_url, pdf_url, pdf_storage_path, signed_at, expires_at, waiver_version, status, confirmation_number").order("signed_at", { ascending: false }),
+    supabase.from("camp_guests").select("id, legal_name, preferred_name, email, phone, identity_corrected_at").order("legal_name"),
+    supabase.from("day_pass_purchases").select("id, purchaser_name, purchase_date, admission_date, quantity, source").order("purchase_date", { ascending: false }),
+    supabase.from("day_pass_attendees").select("id, purchase_id, guest_id, attendee_name, confirmation_code, slot_number").order("created_at", { ascending: false }),
+  ]);
+  if (error || guestsError || purchasesError || slotsError) throw new Error(error?.message || guestsError?.message || purchasesError?.message || slotsError?.message || "Unable to load the waiver dashboard.");
 
-  const submissions = (data ?? []) as WaiverSubmission[];
-
-  return (
-    <main className="min-h-screen bg-slate-950 px-5 py-10 text-white md:px-8">
-      <section className="mx-auto max-w-5xl">
-        <div className="mb-6 rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
-          <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
-            Camp Nackte
-          </p>
-          <h1 className="mt-4 text-3xl font-bold tracking-tight">
-            Signed Waivers
-          </h1>
-          <p className="mt-3 text-slate-300">
-            A simple list of waiver submissions from the same table used by the
-            submission route. Use the date filters below to focus on a specific
-            day or range.
-          </p>
-        </div>
-
-        {error ? (
-          <div className="rounded-2xl border border-red-800 bg-red-950/40 p-4 text-red-200">
-            Unable to load waiver submissions right now.
-          </div>
-        ) : submissions.length === 0 ? (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-slate-300">
-            No waiver submissions have been recorded yet.
-          </div>
-        ) : (
-          <CampNackteWaiverSubmissionsClient submissions={submissions} />
-        )}
-      </section>
-    </main>
-  );
+  return <main className="min-h-screen bg-slate-950 px-5 py-10 text-white md:px-8"><section className="mx-auto max-w-7xl">
+    <header className="mb-6 rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8"><p className="text-sm uppercase tracking-[0.4em] text-slate-400">Camp Nackte Staff</p><h1 className="mt-4 text-3xl font-bold">Annual Waivers & Day Passes</h1><p className="mt-3 text-slate-300">Manage verified guests, annual waiver status, and future day-pass attendee links.</p></header>
+    <CampNackteWaiverSubmissionsClient submissions={(waivers || []).map((waiver) => ({ id: waiver.id, guest_id: waiver.guest_id, full_name: waiver.full_name, email: waiver.email, phone: waiver.phone, visit_date: waiver.visit_date, waiver_text: waiver.waiver_text, signature_data_url: waiver.signature_data_url, signed_at: waiver.signed_at, expires_at: waiver.expires_at, waiver_version: waiver.waiver_version, status: waiver.status, confirmation_number: waiver.confirmation_number, pdfOpenUrl: waiver.pdf_storage_path || waiver.pdf_url ? `/camp-nackte/waiver/submissions/pdf/${waiver.id}` : null }))} guests={guests || []} purchases={purchases || []} slots={slots || []} />
+  </section></main>;
 }
