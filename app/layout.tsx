@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Parade One",
+  title: "ParadeOne",
   description: "A Nackte Company",
 };
 

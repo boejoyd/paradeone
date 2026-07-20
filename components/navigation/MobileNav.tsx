@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -69,11 +70,18 @@ export function MobileNav({ userEmail }: MobileNavProps) {
 
                 setOpen(true);
               }}
-              className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-700 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-900"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-600 bg-white transition hover:border-slate-400 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
               aria-label={open ? "Close navigation drawer" : "Open navigation drawer"}
               aria-expanded={open}
             >
-              ☰
+              <Image
+                src="/paradeone-mark.png"
+                alt=""
+                width={32}
+                height={32}
+                priority
+                className="h-full w-full object-cover"
+              />
             </button>
 
             <p className="truncate text-xs font-semibold tracking-wide text-slate-200">{commandContext}</p>
