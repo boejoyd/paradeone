@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #29374a;
+  --foreground: #f8fafc;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -12,11 +13,84 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-theme="light"] {
+  --background: #29374a;
+  --foreground: #f8fafc;
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #d5dde8;
+  --color-slate-400: #b5c1d1;
+  --color-slate-500: #aeb9c9;
+  --color-slate-600: #6f8199;
+  --color-slate-700: #526278;
+  --color-slate-800: #3b4a60;
+  --color-slate-900: #29374a;
+  --color-slate-950: #182335;
+}
+
+[data-theme="dark"] {
+  --background: #070c15;
+  --foreground: #f8fafc;
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #a0aec0;
+  --color-slate-500: #7b8aa2;
+  --color-slate-600: #41506a;
+  --color-slate-700: #253044;
+  --color-slate-800: #111827;
+  --color-slate-900: #070c15;
+  --color-slate-950: #00040b;
+}
+
+[data-theme="ocean"] {
+  --background: #09243a;
+  --foreground: #f6fafb;
+  --color-slate-50: #f6fafb;
+  --color-slate-100: #eaf2f5;
+  --color-slate-200: #d9e8ed;
+  --color-slate-300: #bad0da;
+  --color-slate-400: #86aabd;
+  --color-slate-500: #80aabd;
+  --color-slate-600: #2c6688;
+  --color-slate-700: #1a4b69;
+  --color-slate-800: #10364f;
+  --color-slate-900: #09243a;
+  --color-slate-950: #04131f;
+}
+
+[data-theme="forest"] {
+  --background: #0d2a1f;
+  --foreground: #f5faf7;
+  --color-slate-50: #f5faf7;
+  --color-slate-100: #e9f2ec;
+  --color-slate-200: #d7e7dc;
+  --color-slate-300: #bed2c6;
+  --color-slate-400: #8faf9c;
+  --color-slate-500: #8daf99;
+  --color-slate-600: #367055;
+  --color-slate-700: #24543f;
+  --color-slate-800: #173d2f;
+  --color-slate-900: #0d2a1f;
+  --color-slate-950: #06150f;
+}
+
+[data-theme="crimson"] {
+  --background: #321c24;
+  --foreground: #fff8fa;
+  --color-slate-50: #fff8fa;
+  --color-slate-100: #f8ecef;
+  --color-slate-200: #ecdade;
+  --color-slate-300: #d8bec3;
+  --color-slate-400: #ba9199;
+  --color-slate-500: #bd949d;
+  --color-slate-600: #7d4c5a;
+  --color-slate-700: #633544;
+  --color-slate-800: #4a2732;
+  --color-slate-900: #321c24;
+  --color-slate-950: #1d0e14;
 }
 
 body {
