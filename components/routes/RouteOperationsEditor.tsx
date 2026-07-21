@@ -338,17 +338,17 @@ export function RouteOperationsEditor({
   const hasJudges = checkpoints.some((checkpoint) => /judg/i.test(checkpoint.name));
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(340px,0.7fr)]">
-      <div className="space-y-3">
+    <div className="grid gap-6 xl:h-[calc(100dvh-11rem)] xl:min-h-[560px] xl:grid-cols-[minmax(0,1fr)_400px] xl:overflow-hidden">
+      <div className="flex min-h-0 flex-col gap-3">
         <div className="flex flex-wrap gap-2 rounded-xl border border-slate-700 bg-slate-900 p-3">
           <button type="button" onClick={() => setMode("route")} className={`rounded-lg px-4 py-2 text-sm font-semibold ${mode === "route" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-200"}`}>Draw Route</button>
           <button type="button" onClick={() => setMode("checkpoint")} className={`rounded-lg px-4 py-2 text-sm font-semibold ${mode === "checkpoint" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-200"}`}>Place Checkpoints</button>
           <span className="self-center text-xs text-slate-400">{mode === "route" ? "Click along the route in travel order." : "Click once to place the selected checkpoint."}</span>
         </div>
-        <div ref={containerRef} className="min-h-[560px] w-full overflow-hidden rounded-2xl border border-slate-700 bg-slate-900" />
+        <div ref={containerRef} className="min-h-[560px] w-full flex-1 overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 xl:min-h-0" />
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-5 xl:h-full xl:overflow-y-auto xl:pr-1">
         <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
           <h2 className="font-bold text-white">Operational readiness</h2>
           <ul className="mt-3 grid gap-2 text-sm">
