@@ -3,7 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { addOrInviteOrganizationMember } from "@/lib/organizations/memberships";
-import { requireOrganizationRole, requireUser, type OrganizationRole } from "@/lib/auth";
+import {
+  requireOrganizationAccess,
+  requireOrganizationRole,
+  requireUser,
+  type OrganizationRole,
+} from "@/lib/auth";
+import {
+  canAssignOrganizationRole,
+  canManageOrganizationUsers,
+} from "@/lib/organizations/permissions";
 import { supabase } from "@/lib/supabase";
 
 function parseRole(value: FormDataEntryValue | null): OrganizationRole {
@@ -27,7 +36,11 @@ export async function addOrganizationMemberOrInvite(formData: FormData) {
   }
 
   const user = await requireUser();
-  await requireOrganizationRole(organizationId, ["owner", "admin"]);
+  const access = await requireOrganizationAccess(organizationId);
+
+  if (!canManageOrganizationUsers(access.role) || !canAssignOrganizationRole(access.role, role)) {
+    throw new Error("Your organization role cannot assign that permission level.");
+  }
 
   await addOrInviteOrganizationMember({
     organizationId,

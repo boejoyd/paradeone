@@ -13,7 +13,11 @@ function applyTheme(theme: ParadeOneTheme) {
   document.documentElement.dataset.theme = theme;
 }
 
-export function ThemeSelector() {
+type ThemeSelectorProps = {
+  placement?: "menu" | "settings";
+};
+
+export function ThemeSelector({ placement = "menu" }: ThemeSelectorProps) {
   const [theme, setTheme] = useState<ParadeOneTheme>(() => {
     if (typeof document === "undefined") return DEFAULT_THEME;
 
@@ -45,9 +49,23 @@ export function ThemeSelector() {
     }
   };
 
+  const settingsPlacement = placement === "settings";
+
   return (
-    <label className="block border-y border-slate-700 px-2 py-3">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+    <label
+      className={
+        settingsPlacement
+          ? "block rounded-xl border border-slate-600 bg-slate-950/45 p-4"
+          : "block border-y border-slate-700 px-2 py-3"
+      }
+    >
+      <span
+        className={
+          settingsPlacement
+            ? "text-sm font-semibold text-slate-100"
+            : "text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300"
+        }
+      >
         Appearance
       </span>
       <select
@@ -57,7 +75,10 @@ export function ThemeSelector() {
             handleChange(event.target.value);
           }
         }}
-        className="mt-2 w-full rounded-md border border-slate-600 bg-slate-900 px-2.5 py-2 text-sm font-semibold text-slate-100 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30"
+        className={[
+          "mt-2 w-full rounded-md border border-slate-600 bg-slate-900 text-sm font-semibold text-slate-100 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30",
+          settingsPlacement ? "max-w-xl px-4 py-3" : "px-2.5 py-2",
+        ].join(" ")}
         aria-label="ParadeOne color theme"
       >
         {THEME_OPTIONS.map((option) => (

@@ -1,9 +1,14 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { Card } from "@/components/ui/Card";
-import { requireOrganizationRole } from "@/lib/auth";
+import { requireOrganizationAccess } from "@/lib/auth";
 import { requireAccessibleOrganizationBySlug } from "@/lib/organizations/access";
+import {
+  canManageOrganizationUsers,
+  getAssignableOrganizationRoles,
+} from "@/lib/organizations/permissions";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { addOrganizationMemberOrInvite } from "./actions";
 import { OrganizationDangerZoneForm } from "./OrganizationDangerZoneForm";
@@ -22,7 +27,11 @@ export default async function OrganizationSettingsPage({
   const organization = await requireAccessibleOrganizationBySlug(slug);
   const supabase = await createServerSupabaseClient();
 
-  await requireOrganizationRole(organization.id, ["owner", "admin"]);
+  const access = await requireOrganizationAccess(organization.id);
+  if (!canManageOrganizationUsers(access.role)) {
+    redirect(`/organizations/${organization.slug}`);
+  }
+  const assignableRoles = getAssignableOrganizationRoles(access.role);
 
   const { data: members, error: membersError } = await supabase
     .from("organization_members")
@@ -92,10 +101,11 @@ export default async function OrganizationSettingsPage({
                   defaultValue="staff"
                   className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
                 >
-                  <option value="owner">Owner</option>
-                  <option value="admin">Admin</option>
-                  <option value="staff">Staff</option>
-                  <option value="volunteer">Volunteer</option>
+                  {assignableRoles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.label}
+                    </option>
+                  ))}
                 </select>
               </label>
 

@@ -81,6 +81,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (user.app_metadata?.requires_password_change === true && pathname !== "/settings") {
+    const settingsUrl = new URL("/settings", request.url);
+    settingsUrl.searchParams.set("password", "required");
+    return NextResponse.redirect(settingsUrl);
+  }
+
   return response;
 }
 
