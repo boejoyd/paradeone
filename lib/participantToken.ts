@@ -1,6 +1,8 @@
+import "server-only";
+
 import { randomBytes } from "node:crypto";
 
-import { supabase } from "@/lib/supabase";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export type ParticipantTokenPayload = {
   organizationId: string;
@@ -41,6 +43,14 @@ function generateParticipantToken() {
   return randomBytes(24).toString("base64url");
 }
 
+function requireAdminClient() {
+  const supabase = createAdminSupabaseClient();
+  if (!supabase) {
+    throw new Error("Participant access is temporarily unavailable.");
+  }
+  return supabase;
+}
+
 export async function getParticipantTokenPayload(
   token: string
 ): Promise<ParticipantTokenPayload | null> {
@@ -48,6 +58,7 @@ export async function getParticipantTokenPayload(
     return null;
   }
 
+  const supabase = requireAdminClient();
   const { data, error } = await supabase
     .from("participant_access_tokens")
     .select("token, organization_id, event_id, entry_id, expires_at, revoked_at")
@@ -74,6 +85,7 @@ export async function createOrReuseParticipantToken(params: {
   expiresAt?: string | null;
 }): Promise<ParticipantTokenPayload> {
   const { organizationId, eventId, entryId, expiresAt = null } = params;
+  const supabase = requireAdminClient();
 
   const { data: existing, error: existingError } = await supabase
     .from("participant_access_tokens")
