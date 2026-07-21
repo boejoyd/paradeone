@@ -1,9 +1,17 @@
 import Link from "next/link";
 
 import { createOrReuseParticipantToken } from "@/lib/participantToken";
-import { supabase } from "@/lib/supabase";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+
+export const dynamic = "force-dynamic";
 
 export default async function ParticipantTestPage() {
+  const supabase = createAdminSupabaseClient();
+
+  if (!supabase) {
+    throw new Error("Participant test access is temporarily unavailable.");
+  }
+
   const { data: latestEntry, error } = await supabase
     .from("entries")
     .select("id, name, event_id, events(id, name, organization_id, organizations(name))")
