@@ -13,6 +13,63 @@
   --font-mono: var(--font-geist-mono);
 }
 
+[data-theme="daylight"] {
+  --background: #f1f5f9;
+  --foreground: #172033;
+  --color-slate-50: #0f172a;
+  --color-slate-100: #172033;
+  --color-slate-200: #243247;
+  --color-slate-300: #405168;
+  --color-slate-400: #56677d;
+  --color-slate-500: #64748b;
+  --color-slate-600: #aebdcb;
+  --color-slate-700: #cbd5e1;
+  --color-slate-800: #e2e8f0;
+  --color-slate-900: #f1f5f9;
+  --color-slate-950: #ffffff;
+  color-scheme: light;
+}
+
+/*
+ * Most of the interface uses the slate scale semantically: high-numbered
+ * shades are surfaces and low-numbered shades are text. The daylight theme
+ * reverses that scale, so explicit white text also needs to become dark.
+ */
+[data-theme="daylight"] .text-white {
+  color: #172033;
+}
+
+/* Keep action buttons and operational statuses readable on saturated fills. */
+[data-theme="daylight"] :is(
+  .bg-blue-500,
+  .bg-blue-600,
+  .bg-sky-600,
+  .bg-green-500,
+  .bg-green-600,
+  .bg-emerald-500,
+  .bg-emerald-600,
+  .bg-red-500,
+  .bg-red-600,
+  .bg-orange-600,
+  .bg-indigo-600,
+  .bg-violet-600,
+  .bg-purple-600,
+  [class*="bg-[#"]
+) {
+  color: #ffffff;
+}
+
+[data-theme="daylight"] :is(.bg-yellow-200, .bg-yellow-300, .bg-yellow-400, .bg-yellow-500, .bg-yellow-600) {
+  color: #020617;
+}
+
+/* Preserve the intentionally white legal-document and signature surfaces. */
+[data-theme="daylight"] .bg-white {
+  --color-slate-500: #64748b;
+  --color-slate-800: #1e293b;
+  --color-slate-950: #020617;
+}
+
 [data-theme="light"] {
   --background: #29374a;
   --foreground: #f8fafc;
