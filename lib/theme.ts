@@ -2,6 +2,11 @@ export const THEME_STORAGE_KEY = "paradeone-theme";
 
 export const THEME_OPTIONS = [
   {
+    id: "daylight",
+    label: "Bright Daylight",
+    description: "White surfaces with dark, high-contrast text",
+  },
+  {
     id: "light",
     label: "Lighter Slate",
     description: "Brighter surfaces for daytime use",
