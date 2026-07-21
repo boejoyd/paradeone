@@ -10,7 +10,7 @@ export function Button({ children, variant = "primary", ...props }: ButtonProps)
   const styles =
     variant === "primary"
       ? "bg-blue-500 text-white hover:bg-blue-400"
-      : "border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800";
+      : "border border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700";
 
   return (
     <button className={`${base} ${styles}`} {...props}>

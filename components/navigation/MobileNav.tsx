@@ -57,7 +57,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+      <header className="sticky top-0 z-50 border-b border-slate-700 bg-slate-900/95 shadow-sm shadow-slate-950/20 backdrop-blur">
         <div className="flex h-10 items-center justify-between gap-2 px-2 sm:px-3">
           <div className="flex min-w-0 items-center gap-2">
             <button
@@ -84,14 +84,14 @@ export function MobileNav({ userEmail }: MobileNavProps) {
               />
             </button>
 
-            <p className="truncate text-xs font-semibold tracking-wide text-slate-200">{commandContext}</p>
+            <p className="truncate text-xs font-semibold tracking-wide text-slate-100">{commandContext}</p>
           </div>
 
           <div className="relative">
             <button
               type="button"
               onClick={() => setUserMenuOpen((prev) => !prev)}
-              className="inline-flex h-7 items-center rounded border border-slate-700 px-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-900"
+              className="inline-flex h-7 items-center rounded border border-slate-600 bg-slate-800 px-2 text-xs font-semibold text-slate-100 transition hover:border-slate-400 hover:bg-slate-700"
               aria-expanded={userMenuOpen}
               aria-label="Toggle user menu"
             >
@@ -99,12 +99,12 @@ export function MobileNav({ userEmail }: MobileNavProps) {
             </button>
 
             {userMenuOpen ? (
-              <div className="absolute right-0 top-9 w-52 rounded-md border border-slate-700 bg-slate-900 p-2 shadow-xl">
-                <p className="truncate px-2 py-1 text-[11px] uppercase tracking-[0.2em] text-slate-400">User Menu</p>
+              <div className="absolute right-0 top-9 w-52 rounded-md border border-slate-600 bg-slate-800 p-2 shadow-xl shadow-slate-950/30">
+                <p className="truncate px-2 py-1 text-[11px] uppercase tracking-[0.2em] text-slate-300">User Menu</p>
                 <form action={signOut}>
                   <button
                     type="submit"
-                    className="mt-1 w-full rounded px-2 py-1.5 text-left text-sm text-slate-200 transition hover:bg-slate-800"
+                    className="mt-1 w-full rounded px-2 py-1.5 text-left text-sm text-slate-100 transition hover:bg-slate-700"
                   >
                     Sign Out
                   </button>
@@ -119,7 +119,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
 
       <aside
         className={[
-          "fixed left-0 top-0 z-50 h-screen w-72 border-r border-slate-800 bg-slate-950 p-4 shadow-2xl transition-transform duration-200",
+          "fixed left-0 top-0 z-50 h-screen w-72 border-r border-slate-700 bg-slate-900 p-4 shadow-2xl shadow-slate-950/40 transition-transform duration-200",
           open ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
         aria-hidden={!open}
@@ -129,7 +129,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
           <button
             type="button"
             onClick={closeMenus}
-            className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-200 transition hover:border-slate-500 hover:bg-slate-900"
+            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100 transition hover:border-slate-400 hover:bg-slate-700"
             aria-label="Close navigation drawer"
           >
             Close
@@ -147,7 +147,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
                 onClick={closeMenus}
                 className={[
                   "rounded-md px-3 py-2 text-sm font-medium transition",
-                  active ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-900 hover:text-white",
+                  active ? "bg-blue-600 text-white" : "text-slate-200 hover:bg-slate-800 hover:text-white",
                 ].join(" ")}
               >
                 {item.label}
@@ -156,11 +156,11 @@ export function MobileNav({ userEmail }: MobileNavProps) {
           })}
         </nav>
 
-        <div className="mt-4 border-t border-slate-800 pt-4">
+        <div className="mt-4 border-t border-slate-700 pt-4">
           <form action={signOut}>
             <button
               type="submit"
-              className="w-full rounded-md border border-slate-700 px-3 py-2 text-left text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-900"
+              className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-left text-sm font-medium text-slate-100 transition hover:border-slate-400 hover:bg-slate-700"
             >
               Sign Out
             </button>
