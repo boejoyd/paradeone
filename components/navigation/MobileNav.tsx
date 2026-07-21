@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import { signOut } from "@/app/login/actions";
+import { ThemeSelector } from "@/components/theme/ThemeSelector";
 
 const navItems = [
   { label: "Mission Control", href: "/" },
@@ -99,8 +100,9 @@ export function MobileNav({ userEmail }: MobileNavProps) {
             </button>
 
             {userMenuOpen ? (
-              <div className="absolute right-0 top-9 w-52 rounded-md border border-slate-600 bg-slate-800 p-2 shadow-xl shadow-slate-950/30">
+              <div className="absolute right-0 top-9 w-64 rounded-md border border-slate-600 bg-slate-800 p-2 shadow-xl shadow-slate-950/30">
                 <p className="truncate px-2 py-1 text-[11px] uppercase tracking-[0.2em] text-slate-300">User Menu</p>
+                <ThemeSelector />
                 <form action={signOut}>
                   <button
                     type="submit"
