@@ -11,6 +11,7 @@ const FEET_PER_METER = 3.28084;
 
 type Point = { latitude: number; longitude: number };
 type Checkpoint = Point & { checkpoint_type: string; geofence_radius_feet: number };
+export type OperationalCheckpoint = Checkpoint & { id?: string; name: string };
 type EntryRouteSnapshot = {
   id: string; event_id: string; pushed_off_at: string | null; route_state: RouteState;
   route_candidate_state: RouteState | null; route_candidate_count: number; route_candidate_since: string | null;
@@ -23,6 +24,17 @@ function distanceFeet(a: Point, b: Point) {
   const deltaLongitude = radians(b.longitude - a.longitude);
   const value = Math.sin(deltaLatitude / 2) ** 2 + Math.cos(radians(a.latitude)) * Math.cos(radians(b.latitude)) * Math.sin(deltaLongitude / 2) ** 2;
   return 6_371_000 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value)) * FEET_PER_METER;
+}
+
+export function findActiveOperationalCheckpoints(
+  point: Point,
+  checkpoints: OperationalCheckpoint[]
+) {
+  return checkpoints.filter(
+    (checkpoint) =>
+      checkpoint.checkpoint_type === "intermediate" &&
+      distanceFeet(point, checkpoint) <= checkpoint.geofence_radius_feet
+  );
 }
 
 function pointToSegmentFeet(point: Point, start: Point, end: Point) {

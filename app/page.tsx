@@ -54,6 +54,8 @@ export default async function Home() {
       <MissionControlConsole
         view="combined"
         liveMapSpots={mapData.spots}
+        liveMapRouteGeometry={mapData.routeGeometry}
+        liveMapRouteCheckpoints={mapData.routeCheckpoints}
         liveMapEditBasePath={mapData.editBasePath}
         activeParadeLabel={mapData.eventName}
         statusContext={{

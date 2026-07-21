@@ -18,7 +18,7 @@ export default async function RouteOperationsPage({ params }: Props) {
   if (error) throw new Error(error.message);
   return <AppShell>
     <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: organization.name, href: `/organizations/${slug}` }, { label: event.name, href: `/organizations/${slug}/parades/${eventId}` }, { label: "Route & Operations" }]} />
-    <PageHeader eyebrow="Parade setup" title="Route & Operations Setup" description="Define the route corridor and the checkpoints used during parade-day operations." />
+    <PageHeader eyebrow="Parade setup" title="Route & Operations Setup" description="Draw the parade route and place route-entry, finish, dispersal, announcer, and judges geofences." />
     <RouteOperationsEditor eventId={eventId} routeGeometry={route?.route_geometry ?? null} initialCorridorWidthFeet={route?.corridor_width_feet ?? 60} initialCheckpoints={checkpoints ?? []} />
   </AppShell>;
 }

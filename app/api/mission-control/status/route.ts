@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
+import { findActiveOperationalCheckpoints, type OperationalCheckpoint } from "@/lib/routeState";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type MissionControlOperationalStatus =
@@ -26,6 +27,10 @@ type LiveStatusEntry = {
   checkedInAt: string | null;
   pushedOffAt: string | null;
   routeState: RouteState;
+  gpsLatitude: number | null;
+  gpsLongitude: number | null;
+  activeCheckpointNames: string[];
+  onRouteAt: string | null;
 };
 
 function parseOperationalStatus(value: unknown): MissionControlOperationalStatus | null {
@@ -101,24 +106,43 @@ export async function GET(request: Request) {
     return context.error;
   }
 
-  const { data: entries, error } = await context.supabase
-    .from("entries")
-    .select("id, parade_number, check_in_status, checked_in_at, pushed_off_at, route_state")
-    .eq("event_id", eventId)
-    .order("parade_number", { ascending: true, nullsFirst: false });
+  const [{ data: entries, error }, { data: checkpoints }] = await Promise.all([
+    context.supabase
+      .from("entries")
+      .select("id, parade_number, check_in_status, checked_in_at, pushed_off_at, route_state, gps_lat, gps_lng, on_route_at")
+      .eq("event_id", eventId)
+      .order("parade_number", { ascending: true, nullsFirst: false }),
+    context.supabase
+      .from("route_checkpoints")
+      .select("id, name, checkpoint_type, latitude, longitude, geofence_radius_feet")
+      .eq("event_id", eventId),
+  ]);
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
-  const statuses: LiveStatusEntry[] = (entries ?? []).map((entry) => ({
-    id: entry.id,
-    paradeNumber: entry.parade_number,
-    checkInStatus: entry.route_state !== "staged" ? entry.route_state : entry.pushed_off_at ? "pushed_off" : entry.check_in_status,
-    checkedInAt: entry.checked_in_at,
-    pushedOffAt: entry.pushed_off_at,
-    routeState: entry.route_state as RouteState,
-  }));
+  const operationalCheckpoints = (checkpoints ?? []) as OperationalCheckpoint[];
+  const statuses: LiveStatusEntry[] = (entries ?? []).map((entry) => {
+    const hasLocation = typeof entry.gps_lat === "number" && typeof entry.gps_lng === "number";
+    return {
+      id: entry.id,
+      paradeNumber: entry.parade_number,
+      checkInStatus: entry.route_state !== "staged" ? entry.route_state : entry.pushed_off_at ? "pushed_off" : entry.check_in_status,
+      checkedInAt: entry.checked_in_at,
+      pushedOffAt: entry.pushed_off_at,
+      routeState: entry.route_state as RouteState,
+      gpsLatitude: hasLocation ? entry.gps_lat : null,
+      gpsLongitude: hasLocation ? entry.gps_lng : null,
+      activeCheckpointNames: hasLocation
+        ? findActiveOperationalCheckpoints(
+            { latitude: entry.gps_lat, longitude: entry.gps_lng },
+            operationalCheckpoints
+          ).map((checkpoint) => checkpoint.name)
+        : [],
+      onRouteAt: entry.on_route_at,
+    };
+  });
 
   return NextResponse.json({ ok: true, statuses });
 }

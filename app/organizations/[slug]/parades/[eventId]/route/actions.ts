@@ -14,11 +14,39 @@ async function authorizedClient(eventId: string) {
   return supabase;
 }
 
-export async function saveRouteSettings(input: { eventId: string; corridorWidthFeet: number }) {
+type RouteGeometry = {
+  type: "Feature";
+  properties: Record<string, never>;
+  geometry: {
+    type: "LineString";
+    coordinates: [number, number][];
+  };
+};
+
+function parseRouteGeometry(value: unknown): RouteGeometry | null | undefined {
+  if (value === null) return null;
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as { type?: unknown; properties?: unknown; geometry?: { type?: unknown; coordinates?: unknown } };
+  if (candidate.type !== "Feature" || candidate.geometry?.type !== "LineString" || !Array.isArray(candidate.geometry.coordinates)) return undefined;
+  if (candidate.geometry.coordinates.length < 2 || candidate.geometry.coordinates.length > 5000) return undefined;
+  const coordinates: [number, number][] = [];
+  for (const coordinate of candidate.geometry.coordinates) {
+    if (!Array.isArray(coordinate) || coordinate.length < 2) return undefined;
+    const longitude = Number(coordinate[0]);
+    const latitude = Number(coordinate[1]);
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180 || !Number.isFinite(latitude) || latitude < -90 || latitude > 90) return undefined;
+    coordinates.push([longitude, latitude]);
+  }
+  return { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates } };
+}
+
+export async function saveRouteSettings(input: { eventId: string; corridorWidthFeet: number; routeGeometry: unknown }) {
   if (!Number.isInteger(input.corridorWidthFeet) || input.corridorWidthFeet < 1) return { ok: false as const, error: "Corridor width must be a positive whole number." };
+  const routeGeometry = parseRouteGeometry(input.routeGeometry);
+  if (routeGeometry === undefined) return { ok: false as const, error: "Draw a route with at least two valid map points." };
   try {
     const supabase = await authorizedClient(input.eventId);
-    const { error } = await supabase.from("parade_routes").upsert({ event_id: input.eventId, corridor_width_feet: input.corridorWidthFeet, updated_at: new Date().toISOString() }, { onConflict: "event_id" });
+    const { error } = await supabase.from("parade_routes").upsert({ event_id: input.eventId, corridor_width_feet: input.corridorWidthFeet, route_geometry: routeGeometry, updated_at: new Date().toISOString() }, { onConflict: "event_id" });
     return error ? { ok: false as const, error: error.message } : { ok: true as const };
   } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : "Unable to save route settings." }; }
 }

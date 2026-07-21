@@ -37,6 +37,8 @@ export default async function MissionControlMapPage() {
         <MissionControlConsole
           view="map"
           liveMapSpots={mapData.spots}
+          liveMapRouteGeometry={mapData.routeGeometry}
+          liveMapRouteCheckpoints={mapData.routeCheckpoints}
           liveMapEditBasePath={mapData.editBasePath}
           activeParadeLabel={mapData.eventName}
           statusContext={{
