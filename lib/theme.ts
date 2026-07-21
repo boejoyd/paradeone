@@ -4,32 +4,32 @@ export const THEME_OPTIONS = [
   {
     id: "daylight",
     label: "Bright Daylight",
-    description: "White surfaces with dark, high-contrast text",
+    description: "Bright layered surfaces with dark, high-contrast text",
   },
   {
     id: "light",
     label: "Lighter Slate",
-    description: "Brighter surfaces for daytime use",
+    description: "Brighter slate with clearly separated panels",
   },
   {
     id: "dark",
     label: "Midnight Dark",
-    description: "Low-glare operations console",
+    description: "Low-glare console with distinct surface levels",
   },
   {
     id: "ocean",
     label: "Ocean Blue",
-    description: "Cool navy and blue-gray tones",
+    description: "High-contrast navy and blue-gray tones",
   },
   {
     id: "forest",
     label: "Forest Green",
-    description: "Deep evergreen interface tones",
+    description: "High-contrast evergreen interface tones",
   },
   {
     id: "crimson",
     label: "Crimson",
-    description: "Warm burgundy interface tones",
+    description: "High-contrast warm burgundy tones",
   },
 ] as const;
 
