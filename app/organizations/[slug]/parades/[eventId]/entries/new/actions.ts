@@ -32,7 +32,7 @@ export async function createEntry(formData: FormData) {
     name: String(formData.get("name") || "").trim(),
     entry_type: String(formData.get("entryType") || "float"),
     vehicle_type: parseVehicleType(formData.get("vehicleType")),
-    status: "draft",
+    status: "approved",
     contact_name: String(formData.get("contactName") || "").trim() || null,
     contact_email: String(formData.get("contactEmail") || "").trim() || null,
     contact_phone: String(formData.get("contactPhone") || "").trim() || null,

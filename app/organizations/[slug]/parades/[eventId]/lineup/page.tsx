@@ -28,6 +28,7 @@ export default async function LineupPage({ params }: LineupPageProps) {
       "id, name, entry_type, vehicle_type, status, parade_number, lineup_position, section, staging_spot, check_in_status, staging_spots(spot_code, section, street_name)"
     )
     .eq("event_id", eventId)
+    .in("status", ["approved", "assigned"])
     .order("lineup_position", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
 
@@ -154,7 +155,7 @@ export default async function LineupPage({ params }: LineupPageProps) {
           </div>
         ) : (
           <p className="mt-6 text-slate-400">
-            No entries yet. Add entries before building the lineup.
+            No approved entries yet. Approve registrations before building the lineup.
           </p>
         )}
       </Card>
