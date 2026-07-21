@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { signOut } from "@/app/login/actions";
 import { ThemeSelector } from "@/components/theme/ThemeSelector";
 
@@ -47,6 +47,7 @@ function getCommandContext(pathname: string): string {
 export function MobileNav({ userEmail }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
   const commandContext = useMemo(() => getCommandContext(pathname), [pathname]);
@@ -55,6 +56,30 @@ export function MobileNav({ userEmail }: MobileNavProps) {
     setOpen(false);
     setUserMenuOpen(false);
   };
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!userMenuRef.current?.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [userMenuOpen]);
 
   return (
     <>
@@ -88,7 +113,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
             <p className="truncate text-xs font-semibold tracking-wide text-slate-100">{commandContext}</p>
           </div>
 
-          <div className="relative">
+          <div ref={userMenuRef} className="relative">
             <button
               type="button"
               onClick={() => setUserMenuOpen((prev) => !prev)}
