@@ -3,6 +3,7 @@ import { ActionBar } from "@/components/layout/ActionBar";
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { OpenMissionControlButton } from "@/components/parades/OpenMissionControlButton";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
@@ -10,7 +11,6 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { requireAccessibleEventContext } from "@/lib/organizations/access";
 import { listMissionControlMessages } from "@/lib/mission-control/communications";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { sendMissionControlMessageAction } from "./actions";
 
 type ParadePageProps = {
   params: Promise<{
@@ -83,6 +83,13 @@ export default async function ParadePage({ params }: ParadePageProps) {
         actions={
           <ActionBar>
             <StatusBadge status={event.status} />
+
+            <OpenMissionControlButton
+              organizationSlug={slug}
+              paradeId={eventId}
+              destination="mission-control"
+              label="Activate Mission Control"
+            />
 
             <Link href={`/organizations/${slug}/parades/${eventId}/edit`}>
               <Button variant="secondary">Edit Parade</Button>
@@ -180,43 +187,17 @@ export default async function ParadePage({ params }: ParadePageProps) {
               )}
             </div>
 
-            <form action={sendMissionControlMessageAction} className="space-y-3 rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <input type="hidden" name="slug" value={slug} />
-              <input type="hidden" name="eventId" value={eventId} />
-              <input type="hidden" name="organizationId" value={organization.id} />
-              <input type="hidden" name="senderRole" value="COC" />
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <input
-                  name="senderName"
-                  placeholder="Sender name"
-                  className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-                  required
-                />
-                <input
-                  name="unitName"
-                  placeholder="Unit name"
-                  className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-                />
-                <input
-                  name="entryNumber"
-                  type="number"
-                  min="1"
-                  placeholder="Entry #"
-                  className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-                />
-              </div>
-
-              <textarea
-                name="messageBody"
-                rows={3}
-                placeholder="Send a message as COC"
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-                required
+            <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-sm text-slate-300">
+                Send individual or channel-wide SMS messages from the active Mission Control workspace so replies and delivery results stay in one operational thread.
+              </p>
+              <OpenMissionControlButton
+                organizationSlug={slug}
+                paradeId={eventId}
+                destination="mission-control"
+                label="Open Communications"
               />
-
-              <Button type="submit">Send Message</Button>
-            </form>
+            </div>
           </div>
         </Card>
 

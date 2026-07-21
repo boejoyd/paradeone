@@ -21,6 +21,14 @@ export default async function MissionControlUnitsPage() {
     );
   }
 
+  if (!mapData.hasActiveParade) {
+    return (
+      <AppShell>
+        <EmptyState title="No active parade selected" description="Choose a parade before opening parade-unit operations." actionHref="/parades" actionLabel="Choose Active Parade" />
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="mb-2 flex items-center justify-between">

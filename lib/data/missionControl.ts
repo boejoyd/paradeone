@@ -1,3 +1,4 @@
+import { getActiveParadeId } from "@/lib/activeParade.server";
 import { getUserOrganizationIds, requireUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -26,6 +27,7 @@ type MissionControlMapData = {
   organizationId?: string;
   eventId?: string;
   hasOrganizationMembership: boolean;
+  hasActiveParade: boolean;
 };
 
 export async function getMissionControlMapData(): Promise<MissionControlMapData> {
@@ -36,23 +38,30 @@ export async function getMissionControlMapData(): Promise<MissionControlMapData>
     return {
       spots: [],
       hasOrganizationMembership: false,
+      hasActiveParade: false,
     };
   }
 
   const supabase = await createServerSupabaseClient();
+  const activeParadeId = await getActiveParadeId();
 
-  const { data: eventRow } = await supabase
-    .from("events")
-    .select("id, name, organization_id, organizations(name, slug)")
-    .in("organization_id", organizationIds)
-    .order("event_date", { ascending: false, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
+  const { data: selectedEventRow } = activeParadeId
+    ? await supabase
+        .from("events")
+        .select("id, name, organization_id, organizations(name, slug)")
+        .in("organization_id", organizationIds)
+        .eq("id", activeParadeId)
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
+  const eventRow = selectedEventRow;
 
   if (!eventRow?.id) {
     return {
       spots: [],
       hasOrganizationMembership: true,
+      hasActiveParade: false,
     };
   }
 
@@ -84,5 +93,6 @@ export async function getMissionControlMapData(): Promise<MissionControlMapData>
     organizationId: eventRow.organization_id,
     eventId: eventRow.id,
     hasOrganizationMembership: true,
+    hasActiveParade: true,
   };
 }

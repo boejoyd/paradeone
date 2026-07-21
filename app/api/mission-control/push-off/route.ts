@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
+import { isActiveParadeRequest } from "@/lib/activeParade.server";
 import { sendMissionControlMessage } from "@/lib/mission-control/communications";
-import { normalizePhoneNumber } from "@/lib/mission-control/communicationsDirectory";
+import { sendMissionControlSms } from "@/lib/mission-control/sms";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type PushOffRequest = {
@@ -25,43 +26,6 @@ type EntrySnapshot = {
   route_state: string;
   sms_opt_in: boolean;
 };
-
-async function sendOutboundSms(input: { to: string; body: string }) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const fromPhone = process.env.TWILIO_FROM_PHONE;
-
-  if (!accountSid || !authToken || !fromPhone) {
-    throw new Error("SMS provider is not configured.");
-  }
-
-  const auth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
-  const body = new URLSearchParams({
-    To: input.to,
-    From: fromPhone,
-    Body: input.body,
-  });
-
-  const response = await fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body,
-    }
-  );
-
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as
-      | { message?: string }
-      | null;
-
-    throw new Error(payload?.message || "SMS sending failed.");
-  }
-}
 
 async function validateMissionControlContext(organizationId: string, eventId: string) {
   const user = await getCurrentUser();
@@ -90,6 +54,15 @@ async function validateMissionControlContext(organizationId: string, eventId: st
 
   if (eventError || !event) {
     return { error: NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 }) };
+  }
+
+  if (!(await isActiveParadeRequest(eventId))) {
+    return {
+      error: NextResponse.json(
+        { ok: false, error: "This parade is no longer active in Mission Control. Refresh and select it again." },
+        { status: 409 }
+      ),
+    };
   }
 
   return { supabase };
@@ -224,94 +197,36 @@ if (!entry) {
     transition_source: "push_off",
   });
 
-  const activeParticipant = await context.supabase
-    .from("communication_participants")
-    .select("id, participant_phone, phone_normalized, is_active")
-    .eq("organization_id", organizationId)
-    .eq("event_id", eventId)
-    .eq("participant_type", "parade_unit")
-    .eq("parade_unit_id", entryId)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const outboundMessage = await sendMissionControlMessage({
+    organizationId,
+    eventId,
+    channel: "parade_units",
+    senderType: "coc",
+    direction: "outbound",
+    source: "app",
+    paradeUnitId: entryId,
+    unitName: typedEntry.name,
+    entryNumber: typedEntry.parade_number,
+    messageBody: PUSH_OFF_SMS_BODY,
+    messageType: "chat",
+  });
 
-  const inactiveParticipant = await context.supabase
-    .from("communication_participants")
-    .select("id")
-    .eq("organization_id", organizationId)
-    .eq("event_id", eventId)
-    .eq("participant_type", "parade_unit")
-    .eq("parade_unit_id", entryId)
-    .eq("is_active", false)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const chosenPhoneRaw =
-    activeParticipant.data?.participant_phone || typedEntry.contact_phone || null;
-  const chosenPhone = chosenPhoneRaw ? normalizePhoneNumber(chosenPhoneRaw) : "";
-
-  const latestInboundSms = await context.supabase
-    .from("mission_control_messages")
-    .select("message_body")
-    .eq("organization_id", organizationId)
-    .eq("event_id", eventId)
-    .eq("parade_unit_id", entryId)
-    .eq("direction", "inbound")
-    .eq("source", "sms")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const latestInboundBody = String(latestInboundSms.data?.message_body || "").trim();
-  const hasStopOptOut = /^(stop|stopall|unsubscribe|cancel|end|quit)\b/i.test(
-    latestInboundBody
-  );
-
-  const canSendSms =
-    typedEntry.sms_opt_in === true &&
-    Boolean(chosenPhone) &&
-    !inactiveParticipant.data?.id &&
-    !hasStopOptOut;
-
-  let warning: string | undefined;
   let smsSent = false;
+  let warning: string | undefined;
 
-  if (canSendSms) {
-    try {
-      await sendOutboundSms({
-        to: chosenPhone,
-        body: PUSH_OFF_SMS_BODY,
-      });
-
-      await sendMissionControlMessage({
-        organizationId,
-        eventId,
-        channel: "parade_units",
-        senderType: "coc",
-        direction: "outbound",
-        source: "sms",
-        paradeUnitId: entryId,
-        unitName: typedEntry.name,
-        entryNumber: typedEntry.parade_number,
-        messageBody: PUSH_OFF_SMS_BODY,
-        messageType: "chat",
-      });
-
-      if (activeParticipant.data?.id) {
-        await context.supabase
-          .from("communication_participants")
-          .update({
-            last_sms_sent_at: new Date().toISOString(),
-          })
-          .eq("id", activeParticipant.data.id);
-      }
-
-      smsSent = true;
-    } catch {
-      warning = "Unit pushed off, but SMS failed.";
-    }
+  try {
+    const sms = await sendMissionControlSms({
+      organizationId,
+      eventId,
+      missionControlMessageId: outboundMessage.id,
+      messageBody: PUSH_OFF_SMS_BODY,
+      channel: "parade_units",
+      paradeUnitId: entryId,
+    });
+    smsSent = sms.queued > 0;
+    if (sms.status !== "queued") warning = sms.message;
+  } catch (error) {
+    warning = error instanceof Error ? error.message : "Unit pushed off, but SMS failed.";
   }
 
   return NextResponse.json({
