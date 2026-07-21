@@ -10,7 +10,7 @@ export async function AppShell({ children }: AppShellProps) {
   const userEmail = user?.email ?? null;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-slate-900 text-white selection:bg-blue-300 selection:text-slate-950">
       <MobileNav userEmail={userEmail} />
 
       <div className="w-full">

@@ -290,18 +290,18 @@ const queueItems: QueueItem[] = [
 
 function panelShellClass(dedicated: boolean) {
   return dedicated
-    ? "rounded-2xl border border-slate-800/70 bg-slate-900 px-1.5 py-2 shadow-2xl shadow-slate-950/35 md:px-1.5 md:py-2.5"
-    : "rounded-2xl border border-slate-800/70 bg-slate-900 px-1 py-1.5 shadow-xl shadow-slate-950/25 md:px-1 md:py-2";
+    ? "rounded-2xl border border-slate-700/80 bg-slate-800 px-1.5 py-2 shadow-2xl shadow-slate-950/25 md:px-1.5 md:py-2.5"
+    : "rounded-2xl border border-slate-700/80 bg-slate-800 px-1 py-1.5 shadow-xl shadow-slate-950/20 md:px-1 md:py-2";
 }
 
 function priorityTone(priority: QueueItem["priority"]) {
   if (priority === "high") return "border-red-800 bg-red-950 text-red-300";
   if (priority === "medium") return "border-yellow-800 bg-yellow-950 text-yellow-300";
-  return "border-slate-700 bg-slate-900 text-slate-300";
+  return "border-slate-600 bg-slate-800 text-slate-200";
 }
 
 function controlLinkClass() {
-  return "inline-flex h-7 w-7 items-center justify-center rounded border border-slate-700 bg-slate-950 text-xs font-semibold text-slate-200 transition hover:border-blue-400 hover:text-white";
+  return "inline-flex h-7 w-7 items-center justify-center rounded border border-slate-600 bg-slate-800 text-xs font-semibold text-slate-100 transition hover:border-blue-400 hover:bg-slate-700 hover:text-white";
 }
 
 function MissionControlMapPanel({
@@ -325,14 +325,14 @@ function MissionControlMapPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-800/70">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-700/80">
         <LiveStagingMap spots={liveMapSpots} editBasePath={liveMapEditBasePath} fillHeight />
       </div>
 
       <div className={["grid gap-1.5", dedicated ? "md:grid-cols-5" : "sm:grid-cols-2 lg:grid-cols-5"].join(" ")}>
         {quickInfoCards.map((card) => (
-          <article key={card.label} className="rounded-lg border border-slate-800/70 bg-slate-900/80 px-2 py-1.5 text-xs text-slate-300">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">{card.label}</p>
+          <article key={card.label} className="rounded-lg border border-slate-700/80 bg-slate-800/90 px-2 py-1.5 text-xs text-slate-200">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">{card.label}</p>
             <p className="mt-1 truncate font-semibold text-white">{card.value}</p>
           </article>
         ))}
@@ -528,10 +528,10 @@ function MissionControlUnitsPanel({
   };
 
   return (
-    <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-800/70 bg-slate-950/85">
+    <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/80">
       <div className="h-full min-h-0 overflow-auto">
-        <table className="min-w-full divide-y divide-slate-800/70 text-left text-sm">
-          <thead className="sticky top-0 bg-slate-950/95 text-slate-300 backdrop-blur">
+        <table className="min-w-full divide-y divide-slate-700/70 text-left text-sm">
+          <thead className="sticky top-0 bg-slate-800/95 text-slate-200 backdrop-blur">
             <tr>
               {sortableHeader("name", "Unit")}
               {sortableHeader("organization", "Section")}
@@ -542,9 +542,9 @@ function MissionControlUnitsPanel({
               <th className="px-3 py-2.5 font-medium md:px-4">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/70 text-slate-300">
+          <tbody className="divide-y divide-slate-700/70 text-slate-200">
             {sortedUnits.map((unit) => (
-              <tr key={unit.id} className="align-top bg-slate-950/20">
+              <tr key={unit.id} className="align-top bg-slate-900/25">
                 <td className="px-3 py-2.5 font-semibold text-white md:px-4">{unit.name}</td>
                 <td className="px-3 py-2.5 md:px-4">{unit.organization}</td>
                 <td className="px-3 py-2.5 md:px-4">{unit.stagingSpot}</td>
@@ -836,8 +836,8 @@ function MissionControlChatPanelWithData({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-800/70 bg-slate-950/85">
-      <div className="shrink-0 border-b border-slate-800/70 p-2 md:px-3 md:py-2">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/80">
+      <div className="shrink-0 border-b border-slate-700/80 p-2 md:px-3 md:py-2">
         <div className="flex flex-wrap items-center gap-1.5">
           {communicationChannels.map((channel) => (
             <button
@@ -848,7 +848,7 @@ function MissionControlChatPanelWithData({
                 "rounded-md border px-2.5 py-1.5 text-xs font-semibold transition",
                 selectedChannel === channel.key
                   ? "border-blue-400 bg-blue-500/20 text-white"
-                  : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 hover:text-white",
+                  : "border-slate-600 bg-slate-800 text-slate-200 hover:border-slate-400 hover:bg-slate-700 hover:text-white",
               ].join(" ")}
             >
               {channel.label}
@@ -857,7 +857,7 @@ function MissionControlChatPanelWithData({
           <button
             type="button"
             onClick={() => setShowCreateChannelNotice(true)}
-            className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white"
+            className="rounded-md border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-400 hover:bg-slate-700 hover:text-white"
             aria-label="Create channel"
           >
             +
@@ -870,7 +870,7 @@ function MissionControlChatPanelWithData({
       </div>
 
       <div ref={messageListRef} className="min-h-0 flex-1 overflow-auto p-2 md:px-3 md:py-2">
-        <div className="min-h-full rounded-lg border border-slate-800/70 bg-slate-950 p-3">
+        <div className="min-h-full rounded-lg border border-slate-700/80 bg-slate-800/55 p-3">
           {filteredMessages.length > 0 ? (
             filteredMessages.map((message, index) => {
               const senderIdentity =
@@ -903,9 +903,9 @@ function MissionControlChatPanelWithData({
         </div>
       </div>
 
-      <div className="sticky bottom-0 shrink-0 border-t border-slate-800/70 bg-slate-950/95 p-1.5 backdrop-blur md:px-2 md:py-1.5">
+      <div className="sticky bottom-0 shrink-0 border-t border-slate-700/80 bg-slate-800/95 p-1.5 backdrop-blur md:px-2 md:py-1.5">
         {hasContext ? (
-          <form onSubmit={handleComposeSubmit} className="rounded-md border border-slate-800/70 bg-slate-950 p-1.5">
+          <form onSubmit={handleComposeSubmit} className="rounded-md border border-slate-700/80 bg-slate-800 p-1.5">
             <input type="hidden" name="organizationId" value={communications?.organizationId ?? ""} />
             <input type="hidden" name="eventId" value={communications?.eventId ?? ""} />
             <input type="hidden" name="channel" value={selectedChannel} />
@@ -937,7 +937,7 @@ function MissionControlChatPanelWithData({
                   disabled={isUpdatingStatus}
                 />
                 {unitResultsOpen ? (
-                  <div id="mission-control-unit-results" role="listbox" className="absolute bottom-full left-0 z-30 mb-1 max-h-52 w-full overflow-auto rounded-md border border-slate-700 bg-slate-950 p-1 shadow-2xl">
+                  <div id="mission-control-unit-results" role="listbox" className="absolute bottom-full left-0 z-30 mb-1 max-h-52 w-full overflow-auto rounded-md border border-slate-600 bg-slate-800 p-1 shadow-2xl shadow-slate-950/30">
                     {matchingUnits.length > 0 ? matchingUnits.map((unit, index) => (
                       <button
                         key={unit.id}
@@ -1035,7 +1035,7 @@ function MissionControlChatPanelWithData({
         {statusError ? <p className="mt-2 text-xs text-red-300">{statusError}</p> : null}
 
         {useSampleMessages ? (
-          <div className="mt-3 rounded-lg border border-slate-800/70 bg-slate-900/60 p-3 text-sm text-slate-400">
+          <div className="mt-3 rounded-lg border border-slate-700/80 bg-slate-800/80 p-3 text-sm text-slate-300">
             Sample fallback only when event/organization communications context is unavailable.
           </div>
         ) : null}
@@ -1046,10 +1046,10 @@ function MissionControlChatPanelWithData({
 
 function MissionControlQueuePanel({ dedicated }: { dedicated: boolean }) {
   return (
-    <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-800/70 bg-slate-950/85">
+    <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/80">
       <div className="h-full min-h-0 space-y-3 overflow-auto p-3 md:p-4">
         {queueItems.map((item) => (
-          <article key={item.id} className="rounded-xl border border-slate-800/70 bg-slate-900/80 p-3">
+          <article key={item.id} className="rounded-xl border border-slate-700/80 bg-slate-800/90 p-3">
             <div className="flex flex-wrap items-start justify-between gap-2.5">
               <div>
                 <p className="font-semibold text-white">{item.title}</p>
@@ -1062,7 +1062,7 @@ function MissionControlQueuePanel({ dedicated }: { dedicated: boolean }) {
                 <StatusBadge status={item.status} />
               </div>
             </div>
-            <p className="mt-2 text-sm leading-6 text-slate-300">{item.details}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-200">{item.details}</p>
           </article>
         ))}
       </div>
@@ -1157,7 +1157,7 @@ function MissionControlPanelShell({
 
   return (
     <section className={`${panelShellClass(dedicated)} flex h-full min-h-0 min-w-0 flex-col overflow-hidden`}>
-      <div className="flex h-8 shrink-0 items-center justify-between border-b border-slate-800/70 px-0.5 pb-1.5">
+      <div className="flex h-8 shrink-0 items-center justify-between border-b border-slate-700/80 px-0.5 pb-1.5">
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="text-sm" aria-hidden="true">
             {header.icon}
@@ -1479,7 +1479,7 @@ export function MissionControlConsole({
           <div className="space-y-1">
             <p className="text-[10px] uppercase tracking-[0.32em] text-slate-400">ParadeOne</p>
             <h1 className="text-lg font-semibold tracking-tight text-white md:text-xl">Mission Control</h1>
-            <p className="max-w-3xl text-xs text-slate-300 md:text-sm">
+            <p className="max-w-3xl text-xs text-slate-200 md:text-sm">
               Command-room overview for live map visibility, communications, operations feed, and parade roster management.
             </p>
           </div>
@@ -1551,7 +1551,7 @@ export function MissionControlConsole({
 
             <button
               type="button"
-              className="col-[2] row-[1] cursor-col-resize rounded bg-slate-800/80 transition hover:bg-blue-500/70"
+              className="col-[2] row-[1] cursor-col-resize rounded bg-slate-700/80 transition hover:bg-blue-500/70"
               onPointerDown={() => setDragAxis("vertical")}
               aria-label="Resize live map and communications"
             />
@@ -1571,7 +1571,7 @@ export function MissionControlConsole({
 
             <button
               type="button"
-              className="col-[1/4] row-[2] cursor-row-resize rounded bg-slate-800/80 transition hover:bg-blue-500/70"
+              className="col-[1/4] row-[2] cursor-row-resize rounded bg-slate-700/80 transition hover:bg-blue-500/70"
               onPointerDown={() => setDragAxis("horizontal")}
               aria-label="Resize top panels and parade units"
             />
@@ -1592,7 +1592,7 @@ export function MissionControlConsole({
 
                 <button
                   type="button"
-                  className="mt-1 h-2 w-full cursor-row-resize rounded bg-slate-800/80 transition hover:bg-blue-500/70"
+                  className="mt-1 h-2 w-full cursor-row-resize rounded bg-slate-700/80 transition hover:bg-blue-500/70"
                   onPointerDown={() => setDragAxis("units-bottom")}
                   aria-label="Resize parade units bottom edge"
                 />
@@ -1628,7 +1628,7 @@ export function MissionControlConsole({
                 Close Full Screen
               </Button>
             </div>
-            <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-800/70 bg-slate-950 shadow-2xl shadow-slate-950/70">
+            <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900 shadow-2xl shadow-slate-950/55">
               <div className="h-full min-h-0 overflow-hidden p-1">
                 <MissionControlPanelShell
                   panel={expandedPanel}
