@@ -62,6 +62,87 @@ async function findExistingUserByEmail(email: string): Promise<{ id: string; ema
   return null;
 }
 
+export async function createLocalOrganizationUser(input: {
+  organizationId: string;
+  email: string;
+  password: string;
+  displayName?: string | null;
+  role: OrganizationRole;
+  createdByUserId: string;
+}) {
+  const adminSupabase = createAdminSupabaseClient();
+  if (!adminSupabase) {
+    throw new Error("Local account creation is not configured on this deployment.");
+  }
+
+  const normalizedEmail = normalizeEmail(input.email);
+  if (!normalizedEmail) {
+    throw new Error("Email is required.");
+  }
+
+  const existingUser = await findExistingUserByEmail(normalizedEmail);
+  if (existingUser) {
+    throw new Error(
+      "An account with this email already exists. Add it through the organization invite screen instead."
+    );
+  }
+
+  const { data, error } = await adminSupabase.auth.admin.createUser({
+    email: normalizedEmail,
+    password: input.password,
+    email_confirm: true,
+    user_metadata: {
+      display_name: input.displayName?.trim() || null,
+    },
+    app_metadata: {
+      local_account: true,
+      requires_password_change: true,
+      created_by_user_id: input.createdByUserId,
+    },
+  });
+
+  if (error || !data.user) {
+    throw new Error(error?.message || "Unable to create the local account.");
+  }
+
+  try {
+    const { error: membershipError } = await adminSupabase
+      .from("organization_members")
+      .upsert(
+        {
+          organization_id: input.organizationId,
+          user_id: data.user.id,
+          member_email: normalizedEmail,
+          role: input.role,
+        },
+        { onConflict: "organization_id,user_id" }
+      );
+
+    if (membershipError) {
+      throw new Error(membershipError.message);
+    }
+
+    const { error: inviteCleanupError } = await adminSupabase
+      .from("organization_invites")
+      .update({ status: "accepted" })
+      .eq("organization_id", input.organizationId)
+      .eq("email", normalizedEmail)
+      .eq("status", "pending");
+
+    if (inviteCleanupError) {
+      throw new Error(inviteCleanupError.message);
+    }
+  } catch (membershipError) {
+    await adminSupabase.auth.admin.deleteUser(data.user.id);
+    throw membershipError;
+  }
+
+  return {
+    id: data.user.id,
+    email: normalizedEmail,
+  };
+}
+
 export async function addOrInviteOrganizationMember(input: {
   organizationId: string;
   email: string;
