@@ -13,7 +13,7 @@ import {
 import { LiveStagingMap } from "@/components/maps/LiveStagingMap";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import type { MissionControlMapSpot } from "@/lib/data/missionControl";
+import type { MissionControlMapSpot, MissionControlRouteCheckpoint } from "@/lib/data/missionControl";
 
 type MissionControlView = "combined" | "map" | "units" | "chat" | "queue";
 type MissionControlPanelKey = Exclude<MissionControlView, "combined">;
@@ -40,9 +40,10 @@ type ParadeUnit = {
   entryNumber: number | null;
   status: MissionControlOperationalStatus;
   rawStatus: string | null;
+  zone?: string;
 };
 
-type UnitSortKey = "name" | "organization" | "stagingSpot" | "entryNumber" | "eta" | "status";
+type UnitSortKey = "name" | "organization" | "stagingSpot" | "entryNumber" | "eta" | "status" | "zone";
 type SortDirection = "ascending" | "descending";
 
 type ChatMessage = {
@@ -85,6 +86,8 @@ type QueueItem = {
 type MissionControlConsoleProps = {
   view?: MissionControlView;
   liveMapSpots?: MissionControlMapSpot[];
+  liveMapRouteGeometry?: unknown;
+  liveMapRouteCheckpoints?: MissionControlRouteCheckpoint[];
   liveMapEditBasePath?: string;
   activeParadeLabel?: string;
   statusContext?: {
@@ -307,11 +310,15 @@ function controlLinkClass() {
 function MissionControlMapPanel({
   dedicated,
   liveMapSpots,
+  liveMapRouteGeometry,
+  liveMapRouteCheckpoints,
   liveMapEditBasePath,
   activeParadeLabel,
 }: {
   dedicated: boolean;
   liveMapSpots: MissionControlMapSpot[];
+  liveMapRouteGeometry?: unknown;
+  liveMapRouteCheckpoints?: MissionControlRouteCheckpoint[];
   liveMapEditBasePath?: string;
   activeParadeLabel?: string;
 }) {
@@ -326,7 +333,13 @@ function MissionControlMapPanel({
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
       <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-700/80">
-        <LiveStagingMap spots={liveMapSpots} editBasePath={liveMapEditBasePath} fillHeight />
+        <LiveStagingMap
+          spots={liveMapSpots}
+          routeGeometry={liveMapRouteGeometry}
+          checkpoints={liveMapRouteCheckpoints}
+          editBasePath={liveMapEditBasePath}
+          fillHeight
+        />
       </div>
 
       <div className={["grid gap-1.5", dedicated ? "md:grid-cols-5" : "sm:grid-cols-2 lg:grid-cols-5"].join(" ")}>
@@ -380,10 +393,19 @@ function MissionControlUnitsPanel({
       name: entry.name,
       organization: spot.section || "Field Unit",
       stagingSpot: spot.spot_code,
-      eta: toOperationalStatus(entry.check_in_status) === "ready" ? "Ready" : "Pending",
+      eta: entry.on_route_at
+        ? new Date(entry.on_route_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })
+        : entry.route_state === "on_route"
+          ? "Detected"
+          : "Not yet",
       entryNumber: entry.parade_number,
       status: toOperationalStatus(entry.route_state !== "staged" ? entry.route_state : entry.pushed_off_at ? "pushed_off" : entry.check_in_status),
       rawStatus: entry.route_state !== "staged" ? entry.route_state : entry.pushed_off_at ? "pushed_off" : entry.check_in_status,
+      zone: entry.active_checkpoint_names.length
+        ? entry.active_checkpoint_names.join(", ")
+        : entry.route_state === "on_route"
+          ? "Parade route"
+          : "—",
     }));
   });
 
@@ -537,8 +559,9 @@ function MissionControlUnitsPanel({
               {sortableHeader("organization", "Section")}
               {sortableHeader("stagingSpot", "Staging")}
               {sortableHeader("entryNumber", "Entry #")}
-              {sortableHeader("eta", "ETA")}
+              {sortableHeader("eta", "Route Entry")}
               {sortableHeader("status", "Status")}
+              {sortableHeader("zone", "Geofence")}
               <th className="px-3 py-2.5 font-medium md:px-4">Action</th>
             </tr>
           </thead>
@@ -553,6 +576,7 @@ function MissionControlUnitsPanel({
                 <td className="px-3 py-2.5 md:px-4">
                   <StatusBadge status={unit.status} />
                 </td>
+                <td className="px-3 py-2.5 md:px-4">{unit.zone || "—"}</td>
                 <td className="px-3 py-2.5 md:px-4">
                   {unit.status === "moving" || (unit.rawStatus !== null && ["pushed_off", "approaching_start", "on_route", "approaching_finish", "completed"].includes(unit.rawStatus)) ? (
                     <button type="button" disabled className="inline-flex items-center rounded border border-emerald-800 bg-emerald-950 px-2 py-1 text-xs font-semibold text-emerald-300 opacity-80">
@@ -1075,6 +1099,8 @@ function renderPanel(
   dedicated: boolean,
   mapProps: {
     liveMapSpots: MissionControlMapSpot[];
+    liveMapRouteGeometry?: unknown;
+    liveMapRouteCheckpoints?: MissionControlRouteCheckpoint[];
     liveMapEditBasePath?: string;
     activeParadeLabel?: string;
   },
@@ -1092,6 +1118,8 @@ function renderPanel(
         <MissionControlMapPanel
           dedicated={dedicated}
           liveMapSpots={mapProps.liveMapSpots}
+          liveMapRouteGeometry={mapProps.liveMapRouteGeometry}
+          liveMapRouteCheckpoints={mapProps.liveMapRouteCheckpoints}
           liveMapEditBasePath={mapProps.liveMapEditBasePath}
           activeParadeLabel={mapProps.activeParadeLabel}
         />
@@ -1125,6 +1153,8 @@ function MissionControlPanelShell({
   onFullScreen,
   active,
   liveMapSpots,
+  liveMapRouteGeometry,
+  liveMapRouteCheckpoints,
   liveMapEditBasePath,
   activeParadeLabel,
   communications,
@@ -1136,6 +1166,8 @@ function MissionControlPanelShell({
   onFullScreen?: (panel: MissionControlPanelKey) => void;
   active?: boolean;
   liveMapSpots?: MissionControlMapSpot[];
+  liveMapRouteGeometry?: unknown;
+  liveMapRouteCheckpoints?: MissionControlRouteCheckpoint[];
   liveMapEditBasePath?: string;
   activeParadeLabel?: string;
   communications?: MissionControlConsoleProps["communications"];
@@ -1191,6 +1223,8 @@ function MissionControlPanelShell({
       <div className="min-h-0 flex-1 overflow-hidden pt-1">
         {renderPanel(panel, dedicated, {
           liveMapSpots: liveMapSpots ?? [],
+          liveMapRouteGeometry,
+          liveMapRouteCheckpoints,
           liveMapEditBasePath,
           activeParadeLabel,
         }, statusContext, communications, onStatusUpdate)}
@@ -1202,6 +1236,8 @@ function MissionControlPanelShell({
 export function MissionControlConsole({
   view = "combined",
   liveMapSpots = [],
+  liveMapRouteGeometry,
+  liveMapRouteCheckpoints,
   liveMapEditBasePath,
   activeParadeLabel,
   statusContext,
@@ -1262,6 +1298,10 @@ export function MissionControlConsole({
               checkedInAt: string | null;
               pushedOffAt: string | null;
               routeState: string;
+              gpsLatitude: number | null;
+              gpsLongitude: number | null;
+              activeCheckpointNames: string[];
+              onRouteAt: string | null;
             }>;
           }
         | { ok: false; error?: string }
@@ -1286,7 +1326,20 @@ export function MissionControlConsole({
           let spotChanged = false;
           const nextEntries = spot.entries.map((entry) => {
             const liveStatus = statusByEntryId.get(entry.id);
-            if (!liveStatus || (entry.check_in_status === liveStatus.checkInStatus && entry.route_state === liveStatus.routeState)) {
+            const checkpointsUnchanged = liveStatus
+              ? entry.active_checkpoint_names.join("|") === liveStatus.activeCheckpointNames.join("|")
+              : true;
+            if (
+              !liveStatus ||
+              (
+                entry.check_in_status === liveStatus.checkInStatus &&
+                entry.route_state === liveStatus.routeState &&
+                entry.gps_lat === liveStatus.gpsLatitude &&
+                entry.gps_lng === liveStatus.gpsLongitude &&
+                entry.on_route_at === liveStatus.onRouteAt &&
+                checkpointsUnchanged
+              )
+            ) {
               return entry;
             }
 
@@ -1297,6 +1350,10 @@ export function MissionControlConsole({
               ...entry,
               check_in_status: liveStatus.checkInStatus,
               route_state: liveStatus.routeState,
+              gps_lat: liveStatus.gpsLatitude,
+              gps_lng: liveStatus.gpsLongitude,
+              active_checkpoint_names: liveStatus.activeCheckpointNames,
+              on_route_at: liveStatus.onRouteAt,
             };
           });
 
@@ -1493,6 +1550,8 @@ export function MissionControlConsole({
                 onFullScreen={setExpandedPanel}
                 active={false}
                 liveMapSpots={runtimeSpots}
+                liveMapRouteGeometry={liveMapRouteGeometry}
+                liveMapRouteCheckpoints={liveMapRouteCheckpoints}
                 liveMapEditBasePath={liveMapEditBasePath}
                 activeParadeLabel={activeParadeLabel}
                 statusContext={statusContext}
@@ -1505,6 +1564,8 @@ export function MissionControlConsole({
                 onFullScreen={setExpandedPanel}
                 active={expandedPanel === "chat"}
                 liveMapSpots={runtimeSpots}
+                liveMapRouteGeometry={liveMapRouteGeometry}
+                liveMapRouteCheckpoints={liveMapRouteCheckpoints}
                 statusContext={statusContext}
                 communications={communications}
                 onStatusUpdate={handleStatusUpdate}
@@ -1517,6 +1578,8 @@ export function MissionControlConsole({
               onFullScreen={setExpandedPanel}
               active={expandedPanel === "units"}
               liveMapSpots={runtimeSpots}
+              liveMapRouteGeometry={liveMapRouteGeometry}
+              liveMapRouteCheckpoints={liveMapRouteCheckpoints}
               statusContext={statusContext}
               onStatusUpdate={handleStatusUpdate}
             />
@@ -1542,6 +1605,8 @@ export function MissionControlConsole({
                 onFullScreen={setExpandedPanel}
                 active={false}
                 liveMapSpots={runtimeSpots}
+                liveMapRouteGeometry={liveMapRouteGeometry}
+                liveMapRouteCheckpoints={liveMapRouteCheckpoints}
                 liveMapEditBasePath={liveMapEditBasePath}
                 activeParadeLabel={activeParadeLabel}
                 statusContext={statusContext}
@@ -1563,6 +1628,8 @@ export function MissionControlConsole({
                 onFullScreen={setExpandedPanel}
                 active={expandedPanel === "chat"}
                 liveMapSpots={runtimeSpots}
+                liveMapRouteGeometry={liveMapRouteGeometry}
+                liveMapRouteCheckpoints={liveMapRouteCheckpoints}
                 statusContext={statusContext}
                 communications={communications}
                 onStatusUpdate={handleStatusUpdate}
@@ -1585,6 +1652,8 @@ export function MissionControlConsole({
                     onFullScreen={setExpandedPanel}
                     active={expandedPanel === "units"}
                     liveMapSpots={runtimeSpots}
+                    liveMapRouteGeometry={liveMapRouteGeometry}
+                    liveMapRouteCheckpoints={liveMapRouteCheckpoints}
                     statusContext={statusContext}
                     onStatusUpdate={handleStatusUpdate}
                   />
@@ -1610,6 +1679,8 @@ export function MissionControlConsole({
               onFullScreen={setExpandedPanel}
               active={expandedPanel === focusedPanel}
               liveMapSpots={runtimeSpots}
+              liveMapRouteGeometry={liveMapRouteGeometry}
+              liveMapRouteCheckpoints={liveMapRouteCheckpoints}
               liveMapEditBasePath={liveMapEditBasePath}
               activeParadeLabel={activeParadeLabel}
               statusContext={statusContext}
@@ -1636,6 +1707,8 @@ export function MissionControlConsole({
                   onFullScreen={setExpandedPanel}
                   active
                   liveMapSpots={runtimeSpots}
+                  liveMapRouteGeometry={liveMapRouteGeometry}
+                  liveMapRouteCheckpoints={liveMapRouteCheckpoints}
                   liveMapEditBasePath={liveMapEditBasePath}
                   activeParadeLabel={activeParadeLabel}
                   statusContext={statusContext}

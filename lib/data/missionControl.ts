@@ -1,5 +1,11 @@
 import { getUserOrganizationIds, requireUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { findActiveOperationalCheckpoints, type OperationalCheckpoint } from "@/lib/routeState";
+
+export type MissionControlRouteCheckpoint = OperationalCheckpoint & {
+  id: string;
+  sort_order: number;
+};
 
 export type MissionControlMapSpot = {
   id: string;
@@ -15,11 +21,17 @@ export type MissionControlMapSpot = {
     check_in_status: string | null;
     pushed_off_at: string | null;
     route_state: string;
+    gps_lat: number | null;
+    gps_lng: number | null;
+    on_route_at: string | null;
+    active_checkpoint_names: string[];
   }[] | null;
 };
 
-type MissionControlMapData = {
+export type MissionControlMapData = {
   spots: MissionControlMapSpot[];
+  routeGeometry?: unknown;
+  routeCheckpoints?: MissionControlRouteCheckpoint[];
   editBasePath?: string;
   organizationName?: string;
   eventName?: string;
@@ -56,14 +68,22 @@ export async function getMissionControlMapData(): Promise<MissionControlMapData>
     };
   }
 
-  const { data: spots, error } = await supabase
-    .from("staging_spots")
-    .select(
-      "id, spot_code, section, street_name, latitude, longitude, geofence_radius_feet, reserved_length_feet, entries(id, name, parade_number, check_in_status, pushed_off_at, route_state)"
-    )
-    .eq("event_id", eventRow.id)
-    .order("sort_order", { ascending: true, nullsFirst: false })
-    .order("spot_code", { ascending: true });
+  const [{ data: spots, error }, { data: route }, { data: checkpoints }] = await Promise.all([
+    supabase
+      .from("staging_spots")
+      .select(
+        "id, spot_code, section, street_name, latitude, longitude, geofence_radius_feet, reserved_length_feet, entries(id, name, parade_number, check_in_status, pushed_off_at, route_state, gps_lat, gps_lng, on_route_at)"
+      )
+      .eq("event_id", eventRow.id)
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("spot_code", { ascending: true }),
+    supabase.from("parade_routes").select("route_geometry").eq("event_id", eventRow.id).maybeSingle(),
+    supabase
+      .from("route_checkpoints")
+      .select("id, name, checkpoint_type, latitude, longitude, geofence_radius_feet, sort_order")
+      .eq("event_id", eventRow.id)
+      .order("sort_order", { ascending: true }),
+  ]);
 
   if (error) {
     throw new Error(error.message);
@@ -73,8 +93,27 @@ export async function getMissionControlMapData(): Promise<MissionControlMapData>
     ? eventRow.organizations[0]
     : eventRow.organizations;
 
+  const routeCheckpoints = (checkpoints ?? []) as MissionControlRouteCheckpoint[];
+  const enhancedSpots = (spots ?? []).map((spot) => ({
+    ...spot,
+    entries: Array.isArray(spot.entries)
+      ? spot.entries.map((entry) => ({
+          ...entry,
+          active_checkpoint_names:
+            typeof entry.gps_lat === "number" && typeof entry.gps_lng === "number"
+              ? findActiveOperationalCheckpoints(
+                  { latitude: entry.gps_lat, longitude: entry.gps_lng },
+                  routeCheckpoints
+                ).map((checkpoint) => checkpoint.name)
+              : [],
+        }))
+      : [],
+  })) as MissionControlMapSpot[];
+
   return {
-    spots: (spots ?? []) as MissionControlMapSpot[],
+    spots: enhancedSpots,
+    routeGeometry: route?.route_geometry ?? null,
+    routeCheckpoints,
     editBasePath:
       org?.slug
         ? `/organizations/${org.slug}/parades/${eventRow.id}/staging`
