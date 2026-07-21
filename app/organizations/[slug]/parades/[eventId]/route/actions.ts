@@ -66,3 +66,27 @@ export async function saveCheckpoint(input: { eventId: string; checkpointId?: st
     return error || !data ? { ok: false as const, error: error?.message || "Unable to save checkpoint." } : { ok: true as const, checkpoint: data };
   } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : "Unable to save checkpoint." }; }
 }
+
+export async function deleteCheckpoint(input: { eventId: string; checkpointId: string }) {
+  if (!input.checkpointId.trim()) {
+    return { ok: false as const, error: "Checkpoint is required." };
+  }
+
+  try {
+    const supabase = await authorizedClient(input.eventId);
+    const { error } = await supabase
+      .from("route_checkpoints")
+      .delete()
+      .eq("id", input.checkpointId)
+      .eq("event_id", input.eventId);
+
+    return error
+      ? { ok: false as const, error: error.message }
+      : { ok: true as const };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: error instanceof Error ? error.message : "Unable to delete checkpoint.",
+    };
+  }
+}

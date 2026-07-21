@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   type CheckpointType,
+  deleteCheckpoint,
   saveCheckpoint,
   saveRouteSettings,
 } from "@/app/organizations/[slug]/parades/[eventId]/route/actions";
@@ -297,6 +298,29 @@ export function RouteOperationsEditor({
     setMessage(result.ok ? "Route geometry and corridor saved." : result.error);
   }
 
+  async function removeCheckpoint() {
+    if (!draft.id) return;
+    const confirmed = window.confirm(
+      `Delete “${draft.name || "this checkpoint"}”? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setSaving(true);
+    setMessage("");
+    const checkpointId = draft.id;
+    const result = await deleteCheckpoint({ eventId, checkpointId });
+    setSaving(false);
+
+    if (!result.ok) {
+      setMessage(result.error);
+      return;
+    }
+
+    setCheckpoints((current) => current.filter((checkpoint) => checkpoint.id !== checkpointId));
+    setDraft(emptyDraft);
+    setMessage("Checkpoint deleted.");
+  }
+
   function prepareOperationalCheckpoint(name: string, sortOrder: number) {
     setMode("checkpoint");
     setDraft({ ...emptyDraft, name, radius: "150", sortOrder: String(sortOrder) });
@@ -380,9 +404,19 @@ export function RouteOperationsEditor({
               <input required type="number" value={draft.sortOrder} onChange={(event) => setDraft({ ...draft, sortOrder: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2" />
             </label>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <button disabled={saving} className="rounded-md bg-sky-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{saving ? "Saving…" : "Save Geofence"}</button>
             {draft.id ? <button type="button" onClick={() => setDraft(emptyDraft)} className="rounded-md border border-slate-700 px-4 py-2">New Checkpoint</button> : null}
+            {draft.id ? (
+              <button
+                type="button"
+                onClick={() => void removeCheckpoint()}
+                disabled={saving}
+                className="rounded-md border border-red-700 px-4 py-2 font-semibold text-red-300 transition hover:bg-red-950 disabled:opacity-50"
+              >
+                Delete Checkpoint
+              </button>
+            ) : null}
           </div>
           {message ? <p role="status" className="text-sm text-sky-300">{message}</p> : null}
         </form>
