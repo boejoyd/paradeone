@@ -174,16 +174,17 @@ export async function POST(request: Request) {
     route_candidate_state?: null;
     route_candidate_count?: number;
     route_candidate_since?: null;
-    pushed_off_at?: string;
-    approaching_start_at?: string;
-    on_route_at?: string;
-    approaching_finish_at?: string;
-    route_completed_at?: string;
+    pushed_off_at?: string | null;
+    approaching_start_at?: string | null;
+    on_route_at?: string | null;
+    approaching_finish_at?: string | null;
+    route_completed_at?: string | null;
   } = {
   };
 
+  const now = new Date().toISOString();
+
   if (routeState) {
-    const now = new Date().toISOString();
     updatePayload.route_state = routeState;
     updatePayload.route_state_updated_at = now;
     updatePayload.route_state_manual_override_at = now;
@@ -197,10 +198,21 @@ export async function POST(request: Request) {
     if (routeState === "completed") updatePayload.route_completed_at = now;
   } else if (operationalStatus) {
     updatePayload.check_in_status = operationalStatus;
+    updatePayload.route_state = "staged";
+    updatePayload.route_state_updated_at = now;
+    updatePayload.route_state_manual_override_at = now;
+    updatePayload.route_candidate_state = null;
+    updatePayload.route_candidate_count = 0;
+    updatePayload.route_candidate_since = null;
+    updatePayload.pushed_off_at = null;
+    updatePayload.approaching_start_at = null;
+    updatePayload.on_route_at = null;
+    updatePayload.approaching_finish_at = null;
+    updatePayload.route_completed_at = null;
   }
 
   if (operationalStatus === "ready") {
-    updatePayload.checked_in_at = new Date().toISOString();
+    updatePayload.checked_in_at = now;
   }
 
   if (operationalStatus === "not_checked_in") {
@@ -218,8 +230,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: updateError.message }, { status: 500 });
   }
 
-  if (routeState) {
-    await supabase.from("entry_route_state_events").insert({ event_id: eventId, entry_id: entry.id, from_state: currentEntry?.route_state || null, to_state: routeState, transition_source: "manual" });
+  const nextRouteState = routeState ?? (operationalStatus ? "staged" : null);
+  if (nextRouteState && currentEntry?.route_state !== nextRouteState) {
+    await supabase.from("entry_route_state_events").insert({
+      event_id: eventId,
+      entry_id: entry.id,
+      from_state: currentEntry?.route_state || null,
+      to_state: nextRouteState,
+      transition_source: "manual",
+    });
   }
 
   return NextResponse.json({
