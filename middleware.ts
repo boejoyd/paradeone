@@ -36,6 +36,10 @@ function isPublicPath(pathname: string) {
     return true;
   }
 
+  if (pathname.startsWith("/register/")) {
+    return true;
+  }
+
   return /\.[^/]+$/.test(pathname);
 }
 

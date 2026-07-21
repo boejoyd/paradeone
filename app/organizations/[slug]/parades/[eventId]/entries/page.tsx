@@ -59,9 +59,14 @@ export default async function EntriesPage({ params }: EntriesPageProps) {
           </p>
         </div>
 
-        <Link href={`/organizations/${slug}/parades/${eventId}/entries/new`}>
-          <Button>Add Entry</Button>
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link href={`/organizations/${slug}/parades/${eventId}/entries/review`}>
+            <Button variant="secondary">Review Registrations</Button>
+          </Link>
+          <Link href={`/organizations/${slug}/parades/${eventId}/entries/new`}>
+            <Button>Add Entry Manually</Button>
+          </Link>
+        </div>
       </div>
 
       <Card title="Entries">
@@ -87,7 +92,7 @@ export default async function EntriesPage({ params }: EntriesPageProps) {
           </div>
         ) : (
           <p className="mt-4 text-slate-400">
-            No entries yet. Add your first parade entry.
+            No entries yet. Open public registration or add an entry manually.
           </p>
         )}
       </Card>

@@ -25,6 +25,7 @@ export async function autoNumberLineup(formData: FormData) {
     .from("entries")
     .select("id")
     .eq("event_id", eventId)
+    .in("status", ["approved", "assigned"])
     .order("lineup_position", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
 
@@ -38,6 +39,7 @@ export async function autoNumberLineup(formData: FormData) {
       .update({
         lineup_position: position,
         parade_number: position,
+        status: "assigned",
       })
       .eq("id", entries[index].id);
 

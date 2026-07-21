@@ -120,6 +120,25 @@ export default async function ParadePage({ params }: ParadePageProps) {
           </div>
         </Card>
 
+        <Card title="Public Registration">
+          <p>
+            Registration is currently <strong>{event.status === "registration_open" ? "open" : "closed"}</strong>.
+            Participants can submit their own entry information without creating an account.
+          </p>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href={`/register/${eventId}`} target="_blank">
+              <Button variant="secondary">Open Public Form</Button>
+            </Link>
+            <Link href={`/organizations/${slug}/parades/${eventId}/entries/review`}>
+              <Button variant="secondary">Review Registrations</Button>
+            </Link>
+            <Link href={`/organizations/${slug}/parades/${eventId}/edit`}>
+              <Button variant="secondary">Open or Close Registration</Button>
+            </Link>
+          </div>
+        </Card>
+
         <Card title="Lineup Builder">
           <p>
             Build the official parade order, assign parade numbers, and show
