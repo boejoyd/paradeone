@@ -3,7 +3,6 @@ import { EmptyState } from "@/components/layout/EmptyState";
 import { MissionControlConsole } from "@/components/parades/MissionControlConsole";
 import { getMissionControlMapData } from "@/lib/data/missionControl";
 import { listMissionControlMessages } from "@/lib/mission-control/communications";
-import { sendMissionControlChatMessageAction } from "@/app/mission-control/actions";
 
 function toUiSenderType(senderType: string): "coc" | "parade_unit" | "volunteer" | "section_captain" {
   if (senderType === "parade_unit" || senderType === "volunteer" || senderType === "section_captain" || senderType === "coc") {
@@ -41,6 +40,19 @@ export default async function Home() {
     );
   }
 
+  if (!mapData.hasActiveParade) {
+    return (
+      <AppShell>
+        <EmptyState
+          title="No active parade selected"
+          description="Choose the parade Mission Control should operate before sending messages or changing live statuses."
+          actionHref="/parades"
+          actionLabel="Choose Active Parade"
+        />
+      </AppShell>
+    );
+  }
+
   const messages =
     mapData.organizationId && mapData.eventId
       ? await listMissionControlMessages({
@@ -73,7 +85,6 @@ export default async function Home() {
             messageBody: message.message_body,
             createdAt: message.created_at,
           })),
-          sendMessageAction: sendMissionControlChatMessageAction,
         }}
       />
     </AppShell>

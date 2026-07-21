@@ -61,9 +61,20 @@ Do not commit `.env.local` or real credentials. The application currently requir
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_MAPBOX_TOKEN=
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Server-only Twilio credentials. Never prefix these with NEXT_PUBLIC_.
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_FROM_PHONE=
+# Use a Messaging Service SID instead of TWILIO_FROM_PHONE when preferred.
+TWILIO_MESSAGING_SERVICE_SID=
+TWILIO_WEBHOOK_BASE_URL=https://paradeone.com
 ```
 
 Set the same names in the Vercel project environment for deployed builds. The `NEXT_PUBLIC_` variables are exposed to browser code, so they must never contain privileged Supabase service-role credentials or other secrets.
+
+Apply migration `022_twilio_delivery_tracking.sql` before enabling Twilio messages. Then follow [`docs/twilio-setup.md`](docs/twilio-setup.md) to configure inbound and delivery-status webhooks.
 
 ## Project structure
 

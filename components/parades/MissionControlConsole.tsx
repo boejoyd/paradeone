@@ -65,6 +65,12 @@ type MissionControlDbMessage = {
   entryNumber: number | null;
   messageBody: string;
   createdAt: string;
+  direction?: "inbound" | "outbound";
+  source?: "app" | "sms";
+  smsStatus?: "sending" | "delivered" | "partial" | "failed" | null;
+  smsRecipientCount?: number;
+  smsDeliveredCount?: number;
+  smsFailedCount?: number;
 };
 
 type CommunicationsChannel =
@@ -95,7 +101,6 @@ type MissionControlConsoleProps = {
     organizationId?: string;
     eventId?: string;
     messages?: MissionControlDbMessage[];
-    sendMessageAction?: unknown;
   };
 };
 
@@ -605,6 +610,7 @@ function MissionControlChatPanelWithData({
   const [messages, setMessages] = useState<MissionControlDbMessage[]>(incomingMessages ?? []);
   const [previousIncomingMessages, setPreviousIncomingMessages] = useState(incomingMessages);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [sendNotice, setSendNotice] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -642,6 +648,7 @@ function MissionControlChatPanelWithData({
     setActiveUnitIndex(0);
     setStatusError(null);
   };
+  const selectedUnit = searchableUnits.find((unit) => unit.id === selectedEntryId) ?? null;
 
   const handleUnitKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
@@ -684,6 +691,11 @@ function MissionControlChatPanelWithData({
         unitName: message.unitName,
         entryNumber: message.entryNumber,
         body: message.messageBody,
+        direction: message.direction,
+        source: message.source,
+        smsStatus: message.smsStatus,
+        smsRecipientCount: message.smsRecipientCount,
+        smsFailedCount: message.smsFailedCount,
         time: new Date(message.createdAt).toLocaleTimeString([], {
           hour: "numeric",
           minute: "2-digit",
@@ -698,6 +710,11 @@ function MissionControlChatPanelWithData({
           unitName: message.unitName,
           entryNumber: message.entryNumber,
           body: message.body,
+          direction: undefined,
+          source: undefined,
+          smsStatus: null,
+          smsRecipientCount: 0,
+          smsFailedCount: 0,
           time: message.time,
         }))
       : [];
@@ -731,6 +748,33 @@ function MissionControlChatPanelWithData({
     list.scrollTop = list.scrollHeight;
   }, [selectedChannel, filteredMessages.length]);
 
+  useEffect(() => {
+    if (!communications?.organizationId || !communications.eventId) return;
+
+    let isCancelled = false;
+    const pollMessages = async () => {
+      const response = await fetch(
+        `/api/mission-control/messages?organizationId=${encodeURIComponent(communications.organizationId!)}&eventId=${encodeURIComponent(communications.eventId!)}`,
+        { method: "GET", cache: "no-store" }
+      ).catch(() => null);
+
+      if (!response?.ok || isCancelled) return;
+      const payload = (await response.json().catch(() => null)) as
+        | { ok: true; messages: MissionControlDbMessage[] }
+        | { ok: false; error?: string }
+        | null;
+
+      if (!isCancelled && payload?.ok) setMessages(payload.messages);
+    };
+
+    void pollMessages();
+    const timer = window.setInterval(() => void pollMessages(), 4000);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [communications?.eventId, communications?.organizationId]);
+
   const handleComposeSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -746,8 +790,18 @@ function MissionControlChatPanelWithData({
       return;
     }
 
+    if (
+      !selectedEntryId &&
+      !window.confirm(
+        `Send this SMS to every consented recipient in the ${communicationChannels.find((channel) => channel.key === selectedChannel)?.label ?? "selected"} channel?`
+      )
+    ) {
+      return;
+    }
+
     setIsSending(true);
     setSendError(null);
+    setSendNotice(null);
 
     try {
       const response = await fetch("/api/mission-control/messages", {
@@ -759,6 +813,7 @@ function MissionControlChatPanelWithData({
           organizationId: communications.organizationId,
           eventId: communications.eventId ?? "",
           channel: selectedChannel,
+          paradeUnitId: selectedEntryId,
           senderType: "coc",
           messageType: channelMessageType,
           senderName: channelSenderName,
@@ -767,7 +822,11 @@ function MissionControlChatPanelWithData({
       });
 
       const payload = (await response.json().catch(() => null)) as
-        | { ok: true; message: MissionControlDbMessage }
+        | {
+            ok: true;
+            message: MissionControlDbMessage;
+            sms: { status: string; message: string };
+          }
         | { ok: false; error?: string }
         | null;
 
@@ -776,7 +835,8 @@ function MissionControlChatPanelWithData({
       }
 
       setMessages((current) => [...current, payload.message]);
-  form.reset();
+      setSendNotice(payload.sms.message);
+      form.reset();
       textareaRef.current?.focus();
     } catch (error) {
       setSendError(error instanceof Error ? error.message : "Unable to send message.");
@@ -889,6 +949,26 @@ function MissionControlChatPanelWithData({
                     <span className="mx-2 font-semibold text-white">{senderIdentity}</span>
                     <span>{`— ${message.body}`}</span>
                   </p>
+                  <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-400">
+                    {message.direction === "inbound" && message.source === "sms" ? (
+                      <span>SMS reply</span>
+                    ) : null}
+                    {message.smsStatus ? (
+                      <span
+                        className={
+                          message.smsStatus === "failed" || message.smsStatus === "partial"
+                            ? "text-amber-300"
+                            : message.smsStatus === "delivered"
+                              ? "text-emerald-300"
+                              : "text-sky-300"
+                        }
+                      >
+                        SMS {message.smsStatus}
+                        {message.smsRecipientCount ? ` · ${message.smsRecipientCount} recipient${message.smsRecipientCount === 1 ? "" : "s"}` : ""}
+                        {message.smsFailedCount ? ` · ${message.smsFailedCount} failed` : ""}
+                      </span>
+                    ) : null}
+                  </div>
                   {index < filteredMessages.length - 1 ? (
                     <div className="mt-3 border-t border-slate-700" />
                   ) : null}
@@ -1022,8 +1102,27 @@ function MissionControlChatPanelWithData({
                 className="inline-flex h-8 min-h-8 items-center rounded-md border border-blue-400 bg-blue-500 px-3 text-xs font-semibold text-white transition hover:bg-blue-400"
                 disabled={isSending}
               >
-                {isSending ? "Sending" : "Send"}
+                {isSending ? "Sending SMS" : "Send SMS"}
               </button>
+            </div>
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+              <span>
+                {selectedUnit
+                  ? `Direct recipient: ${selectedUnit.name}${selectedUnit.paradeNumber !== null ? ` (#${selectedUnit.paradeNumber})` : ""}`
+                  : `Recipients: entire ${communicationChannels.find((channel) => channel.key === selectedChannel)?.label ?? "selected"} channel`}
+              </span>
+              {selectedUnit ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedEntryId(null);
+                    setUnitQuery("");
+                  }}
+                  className="text-sky-300 hover:text-sky-200"
+                >
+                  Clear direct recipient
+                </button>
+              ) : null}
             </div>
           </form>
         ) : null}
@@ -1031,6 +1130,8 @@ function MissionControlChatPanelWithData({
         {sendError ? (
           <p className="mt-2 text-xs text-red-300">{sendError}</p>
         ) : null}
+
+        {sendNotice ? <p className="mt-2 text-xs text-amber-300">{sendNotice}</p> : null}
 
         {statusError ? <p className="mt-2 text-xs text-red-300">{statusError}</p> : null}
 

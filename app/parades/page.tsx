@@ -106,11 +106,8 @@ export default async function ParadesPage() {
 
                     {organization?.slug && (
                       <OpenMissionControlButton
-                        href={`/organizations/${organization.slug}/parades/${event.id}`}
-                        organizationName={organization.name}
                         organizationSlug={organization.slug}
                         paradeId={event.id}
-                        paradeName={event.name}
                       />
                     )}
                   </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
+import { isActiveParadeRequest } from "@/lib/activeParade.server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type MissionControlOperationalStatus =
@@ -77,6 +78,15 @@ async function validateMissionControlContext(organizationId: string, eventId: st
 
   if (eventError || !event) {
     return { error: NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 }) };
+  }
+
+  if (!(await isActiveParadeRequest(eventId))) {
+    return {
+      error: NextResponse.json(
+        { ok: false, error: "This parade is no longer active in Mission Control. Refresh and select it again." },
+        { status: 409 }
+      ),
+    };
   }
 
   return {

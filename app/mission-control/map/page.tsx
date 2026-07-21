@@ -21,6 +21,14 @@ export default async function MissionControlMapPage() {
     );
   }
 
+  if (!mapData.hasActiveParade) {
+    return (
+      <AppShell>
+        <EmptyState title="No active parade selected" description="Choose a parade before opening the live map." actionHref="/parades" actionLabel="Choose Active Parade" />
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="mb-2 flex items-center justify-between">

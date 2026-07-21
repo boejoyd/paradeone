@@ -3,7 +3,6 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { MissionControlConsole } from "@/components/parades/MissionControlConsole";
-import { sendMissionControlChatMessageAction } from "@/app/mission-control/actions";
 import { getMissionControlMapData } from "@/lib/data/missionControl";
 import { listMissionControlMessages } from "@/lib/mission-control/communications";
 
@@ -39,6 +38,14 @@ export default async function MissionControlChatPage() {
           actionHref="/create-parade"
           actionLabel="Create Your First Parade"
         />
+      </AppShell>
+    );
+  }
+
+  if (!mapData.hasActiveParade) {
+    return (
+      <AppShell>
+        <EmptyState title="No active parade selected" description="Choose a parade before opening communications." actionHref="/parades" actionLabel="Choose Active Parade" />
       </AppShell>
     );
   }
@@ -79,7 +86,6 @@ export default async function MissionControlChatPage() {
               messageBody: message.message_body,
               createdAt: message.created_at,
             })),
-            sendMessageAction: sendMissionControlChatMessageAction,
           }}
         />
       </div>

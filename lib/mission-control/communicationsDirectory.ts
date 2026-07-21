@@ -12,6 +12,7 @@ export type CommunicationsDirectoryIdentity = {
   unitName: string | null;
   entryNumber: number | null;
   displayLabel: string;
+  isActive: boolean;
 };
 
 export function normalizePhoneNumber(value: string): string {
@@ -97,7 +98,8 @@ async function ensureParticipantFromEntry(identity: {
 }
 
 export async function lookupCommunicationsIdentityByPhone(
-  phoneRaw: string
+  phoneRaw: string,
+  options?: { includeInactive?: boolean }
 ): Promise<CommunicationsDirectoryIdentity | null> {
   const normalizedPhone = normalizePhoneNumber(phoneRaw);
   if (!normalizedPhone) {
@@ -106,16 +108,20 @@ export async function lookupCommunicationsIdentityByPhone(
 
   const supabase = await createServerSupabaseClient();
 
-  const { data: participant } = await supabase
+  let participantQuery = supabase
     .from("communication_participants")
     .select(
-      "id, organization_id, event_id, participant_type, participant_name, participant_phone, parade_unit_id, volunteer_id, unit_name, entry_number"
+      "id, organization_id, event_id, participant_type, participant_name, participant_phone, parade_unit_id, volunteer_id, unit_name, entry_number, is_active"
     )
     .eq("phone_normalized", normalizedPhone)
-    .eq("is_active", true)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (!options?.includeInactive) {
+    participantQuery = participantQuery.eq("is_active", true);
+  }
+
+  const { data: participant } = await participantQuery.maybeSingle();
 
   if (participant) {
     const senderName = participant.participant_name || "Unknown Sender";
@@ -141,6 +147,7 @@ export async function lookupCommunicationsIdentityByPhone(
       unitName,
       entryNumber,
       displayLabel: buildDisplayLabel({ senderName, unitName, entryNumber }),
+      isActive: participant.is_active,
     };
   }
 
@@ -194,7 +201,60 @@ export async function lookupCommunicationsIdentityByPhone(
     unitName,
     entryNumber,
     displayLabel: buildDisplayLabel({ senderName, unitName, entryNumber }),
+    isActive: true,
   };
+}
+
+export async function updateSmsConsentForIdentity(
+  identity: CommunicationsDirectoryIdentity,
+  optedIn: boolean
+): Promise<void> {
+  const supabase = await createServerSupabaseClient();
+  const now = new Date().toISOString();
+
+  if (identity.participantId) {
+    if (optedIn) {
+      const normalizedPhone = normalizePhoneNumber(identity.senderPhone);
+      let deactivateQuery = supabase
+        .from("communication_participants")
+        .update({ is_active: false })
+        .eq("organization_id", identity.organizationId)
+        .eq("phone_normalized", normalizedPhone)
+        .neq("id", identity.participantId)
+        .eq("is_active", true);
+      deactivateQuery = identity.eventId
+        ? deactivateQuery.eq("event_id", identity.eventId)
+        : deactivateQuery.is("event_id", null);
+      const { error: deactivateError } = await deactivateQuery;
+
+      if (deactivateError) throw new Error(deactivateError.message);
+    }
+
+    const { error } = await supabase
+      .from("communication_participants")
+      .update({
+        is_active: optedIn,
+        sms_consent_status: optedIn ? "opted_in" : "opted_out",
+        sms_opted_in_at: optedIn ? now : null,
+        sms_opted_out_at: optedIn ? null : now,
+      })
+      .eq("id", identity.participantId);
+
+    if (error) throw new Error(error.message);
+  }
+
+  if (identity.paradeUnitId) {
+    const { error } = await supabase
+      .from("entries")
+      .update({
+        sms_opt_in: optedIn,
+        sms_opt_in_at: optedIn ? now : null,
+        sms_opt_in_source: optedIn ? "sms_start_reply" : "sms_stop_reply",
+      })
+      .eq("id", identity.paradeUnitId);
+
+    if (error) throw new Error(error.message);
+  }
 }
 
 export async function recordInboundSmsForParticipant(

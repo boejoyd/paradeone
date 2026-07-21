@@ -1,39 +1,25 @@
-"use client";
-
-import Link from "next/link";
+import { activateParadeAction } from "@/app/parades/actions";
 import { Button } from "@/components/ui/Button";
-import { ACTIVE_PARADE_KEY } from "@/lib/activeParade";
 
 type OpenMissionControlButtonProps = {
-  href: string;
-  organizationName: string;
   organizationSlug: string;
   paradeId: string;
-  paradeName: string;
+  destination?: "parade" | "mission-control";
+  label?: string;
 };
 
 export function OpenMissionControlButton({
-  href,
-  organizationName,
   organizationSlug,
   paradeId,
-  paradeName,
+  destination = "parade",
+  label = "Open Parade",
 }: OpenMissionControlButtonProps) {
-  function setActiveParade() {
-    window.localStorage.setItem(
-      ACTIVE_PARADE_KEY,
-      JSON.stringify({
-        organizationName,
-        organizationSlug,
-        paradeId,
-        paradeName,
-      })
-    );
-  }
-
   return (
-    <Link href={href} onClick={setActiveParade}>
-      <Button>Open Parade</Button>
-    </Link>
+    <form action={activateParadeAction}>
+      <input type="hidden" name="organizationSlug" value={organizationSlug} />
+      <input type="hidden" name="paradeId" value={paradeId} />
+      <input type="hidden" name="destination" value={destination} />
+      <Button type="submit">{label}</Button>
+    </form>
   );
 }
