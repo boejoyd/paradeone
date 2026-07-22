@@ -1,6 +1,6 @@
 "use server";
 
-import { requireOrganizationRole } from "@/lib/auth";
+import { requireOrganizationCapability } from "@/lib/organizations/permissions.server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type CheckpointType = "route_start" | "intermediate" | "route_finish" | "dispersal_exit";
@@ -10,7 +10,7 @@ async function authorizedClient(eventId: string) {
   const supabase = await createServerSupabaseClient();
   const { data: event, error } = await supabase.from("events").select("organization_id").eq("id", eventId).single();
   if (error || !event) throw new Error(error?.message || "Parade not found.");
-  await requireOrganizationRole(event.organization_id, ["owner", "admin", "staff"]);
+  await requireOrganizationCapability(event.organization_id, "manageRoutes");
   return supabase;
 }
 

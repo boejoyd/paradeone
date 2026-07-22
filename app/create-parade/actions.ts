@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireOrganizationRole, requireUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { ensureOrganizationMembership } from "@/lib/organizations/memberships";
+import { requireOrganizationCapability } from "@/lib/organizations/permissions.server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 function slugify(value: string) {
@@ -43,7 +44,7 @@ export async function createParade(formData: FormData) {
   let organization = existingOrganization;
 
   if (organization) {
-    await requireOrganizationRole(organization.id, ["owner", "admin", "staff"]);
+    await requireOrganizationCapability(organization.id, "createEvents");
   } else {
     const { data: createdOrganization, error: organizationError } = await supabase
       .from("organizations")

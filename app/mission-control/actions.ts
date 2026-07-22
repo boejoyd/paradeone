@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireOrganizationAccess, requireUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { sendMissionControlMessage } from "@/lib/mission-control/communications";
+import { requireOrganizationCapability } from "@/lib/organizations/permissions.server";
 
 export type SendMissionControlChatMessageState = {
   status: "idle" | "success" | "error";
@@ -86,7 +87,11 @@ export async function sendMissionControlChatMessageAction(
   }
 
   try {
-    await requireOrganizationAccess(organizationId);
+    await requireOrganizationCapability(
+      organizationId,
+      "operateMissionControl",
+      "/organizations"
+    );
     const user = await requireUser();
 
     const senderType = parseSenderType(formData.get("senderType"));
@@ -108,7 +113,6 @@ export async function sendMissionControlChatMessageAction(
       source: "app",
       direction: "outbound",
     });
-
     revalidatePath("/");
     revalidatePath("/mission-control/chat");
 
