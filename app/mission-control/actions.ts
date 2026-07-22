@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { sendMissionControlMessage } from "@/lib/mission-control/communications";
-import { requireOrganizationCapability } from "@/lib/organizations/permissions";
+import { requireOrganizationCapability } from "@/lib/organizations/permissions.server";
 
 export type SendMissionControlChatMessageState = {
   status: "idle" | "success" | "error";
