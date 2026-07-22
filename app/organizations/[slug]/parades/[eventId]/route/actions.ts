@@ -1,6 +1,6 @@
 "use server";
 
-import { requireOrganizationCapability } from "@/lib/organizations/permissions";
+import { requireOrganizationCapability } from "@/lib/organizations/permissions.server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type CheckpointType = "route_start" | "intermediate" | "route_finish" | "dispersal_exit";
