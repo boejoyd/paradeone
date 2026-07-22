@@ -6,6 +6,10 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+function getSiteUrl(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+}
+
 export async function ensureOrganizationMembership(input: {
   organizationId: string;
   userId: string;
@@ -208,5 +212,18 @@ export async function addOrInviteOrganizationMember(input: {
     throw new Error(error.message);
   }
 
-  return { status: "invite_pending" as const };
+  const redirectTo = `${getSiteUrl()}/auth/callback?redirect=${encodeURIComponent("/organizations")}`;
+  const { error: inviteError } = await adminSupabase.auth.admin.inviteUserByEmail(normalizedEmail, {
+    redirectTo,
+    data: {
+      organization_id: input.organizationId,
+      organization_role: input.role,
+    },
+  });
+
+  if (inviteError) {
+    throw new Error(`The invitation was saved, but the email could not be sent: ${inviteError.message}`);
+  }
+
+  return { status: "invite_sent" as const };
 }
