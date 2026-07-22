@@ -12,7 +12,7 @@ export async function ensureOrganizationMembership(input: {
   email?: string | null;
   role: OrganizationRole;
 }) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createAdminSupabaseClient() ?? (await createServerSupabaseClient());
   const normalizedEmail = input.email ? normalizeEmail(input.email) : null;
 
   const { error } = await supabase.from("organization_members").upsert(
@@ -149,7 +149,11 @@ export async function addOrInviteOrganizationMember(input: {
   role: OrganizationRole;
   invitedByUserId: string;
 }) {
-  const supabase = await createServerSupabaseClient();
+  const adminSupabase = createAdminSupabaseClient();
+  if (!adminSupabase) {
+    throw new Error("Organization invitations are not configured on this deployment.");
+  }
+
   const normalizedEmail = normalizeEmail(input.email);
 
   if (!normalizedEmail) {
@@ -159,14 +163,23 @@ export async function addOrInviteOrganizationMember(input: {
   const existingUser = await findExistingUserByEmail(normalizedEmail);
 
   if (existingUser) {
-    await ensureOrganizationMembership({
-      organizationId: input.organizationId,
-      userId: existingUser.id,
-      email: existingUser.email ?? normalizedEmail,
-      role: input.role,
-    });
+    const { error: membershipError } = await adminSupabase
+      .from("organization_members")
+      .upsert(
+        {
+          organization_id: input.organizationId,
+          user_id: existingUser.id,
+          member_email: existingUser.email ?? normalizedEmail,
+          role: input.role,
+        },
+        { onConflict: "organization_id,user_id" }
+      );
 
-    const { error: inviteCleanupError } = await supabase
+    if (membershipError) {
+      throw new Error(membershipError.message);
+    }
+
+    const { error: inviteCleanupError } = await adminSupabase
       .from("organization_invites")
       .update({ status: "accepted" })
       .eq("organization_id", input.organizationId)
@@ -180,7 +193,7 @@ export async function addOrInviteOrganizationMember(input: {
     return { status: "member_added" as const };
   }
 
-  const { error } = await supabase.from("organization_invites").upsert(
+  const { error } = await adminSupabase.from("organization_invites").upsert(
     {
       organization_id: input.organizationId,
       email: normalizedEmail,
