@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { ensureOrganizationMembership } from "@/lib/organizations/memberships";
-import { requireOrganizationCapability } from "@/lib/organizations/permissions";
+import { requireOrganizationCapability } from "@/lib/organizations/permissions.server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 function slugify(value: string) {
