@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireOrganizationCapability } from "@/lib/organizations/permissions";
+import { requireOrganizationCapability } from "@/lib/organizations/permissions.server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 async function getEventOrganizationId(eventId: string): Promise<string> {
