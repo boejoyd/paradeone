@@ -51,6 +51,7 @@ export async function submitPublicRegistration(
   const announcerScript = trimmed(formData, "announcerScript");
   const estimatedLength = Number(formData.get("estimatedLengthFeet") || 0);
   const acceptedTerms = trimmed(formData, "acceptTerms") === "agree";
+  const smsOptIn = trimmed(formData, "smsConsent") === "agree";
 
   if (entryName.length < 2 || entryName.length > 160) {
     return errorState("Enter an entry name between 2 and 160 characters.");
@@ -66,6 +67,9 @@ export async function submitPublicRegistration(
   }
   if (contactPhone.length > 40) {
     return errorState("Enter a valid contact phone number.");
+  }
+  if (smsOptIn && contactPhone.replace(/\D/g, "").length < 10) {
+    return errorState("Enter a valid mobile number to receive operational texts.");
   }
   if (!Number.isFinite(estimatedLength) || estimatedLength < 1 || estimatedLength > 2000) {
     return errorState("Enter an estimated entry length between 1 and 2,000 feet.");
@@ -108,9 +112,12 @@ export async function submitPublicRegistration(
       contact_phone: contactPhone || null,
       announcer_script: announcerScript || null,
       estimated_length_feet: estimatedLength,
-      sms_opt_in: false,
-      sms_opt_in_at: null,
-      sms_opt_in_source: null,
+      sms_opt_in: smsOptIn,
+      sms_opt_in_at: smsOptIn ? new Date().toISOString() : null,
+      sms_opt_in_source: smsOptIn ? "public_parade_registration" : null,
+      privacy_policy_version: smsOptIn ? "1.0" : null,
+      terms_version: smsOptIn ? "1.0" : null,
+      sms_terms_version: smsOptIn ? "1.0" : null,
     })
     .select("id")
     .single();
