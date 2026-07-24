@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { normalizeCampWaiverPdfReference } from "@/lib/campNackteWaiverPdf";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ waiverId: string }> }) {
   await requireUser();
   const { waiverId } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createAdminSupabaseClient();
+  if (!supabase) return NextResponse.json({ error: "The Camp Nackte waiver service is not configured." }, { status: 503 });
   const { data: waiver, error } = await supabase.from("camp_nackte_waivers").select("id, waiver_version, pdf_storage_path, pdf_url, full_name, waiver_text, signature_data_url, signed_at, created_at, visit_date").eq("id", waiverId).maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!waiver) return NextResponse.json({ error: "Waiver not found." }, { status: 404 });

@@ -3,13 +3,18 @@ import { NextResponse } from "next/server";
 import { jsPDF } from "jspdf";
 
 import { addCalendarYear, CAMP_NACKTE_WAIVER_TEXT, CAMP_NACKTE_WAIVER_VERSION } from "@/lib/campNackteWaiver";
-import { supabase } from "@/lib/supabase";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 function pdfFilename(value: string) {
   return `${value.replace(/(?:\.pdf)+$/i, "")}.pdf`;
 }
 
 export async function POST(request: Request) {
+  const supabase = createAdminSupabaseClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "The waiver service is temporarily unavailable." }, { status: 503 });
+  }
+
   const body = await request.json().catch(() => null) as { lookupToken?: unknown; visitDate?: unknown; signatureDataUrl?: unknown } | null;
   const lookupToken = String(body?.lookupToken || "");
   const visitDate = String(body?.visitDate || "");

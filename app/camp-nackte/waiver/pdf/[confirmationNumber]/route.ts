@@ -2,9 +2,14 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { CAMP_NACKTE_WAIVER_BUCKET } from "@/lib/campNackteWaiverPdf";
-import { supabase } from "@/lib/supabase";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export async function GET(request: Request, { params }: { params: Promise<{ confirmationNumber: string }> }) {
+  const supabase = createAdminSupabaseClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "The waiver PDF service is temporarily unavailable." }, { status: 503 });
+  }
+
   const { confirmationNumber } = await params;
   const token = new URL(request.url).searchParams.get("token") || "";
   const tokenHash = createHash("sha256").update(token).digest("hex");
