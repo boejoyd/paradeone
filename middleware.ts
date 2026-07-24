@@ -40,6 +40,10 @@ function isPublicPath(pathname: string) {
     return true;
   }
 
+  if (pathname.startsWith("/api/sms/")) {
+    return true;
+  }
+
   return /\.[^/]+$/.test(pathname);
 }
 
