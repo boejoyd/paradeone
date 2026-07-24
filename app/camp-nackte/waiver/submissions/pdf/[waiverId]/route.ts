@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { normalizeCampWaiverPdfReference } from "@/lib/campNackteWaiverPdf";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 function diagnosticPath(path: string) {
   const parts = path.split("/");
@@ -29,9 +28,9 @@ function staffErrorPage(title: string, message: string, status: number) {
 export async function GET(_request: Request, { params }: { params: Promise<{ waiverId: string }> }) {
   await requireUser();
   const { waiverId } = await params;
-  const supabase = await createServerSupabaseClient();
   const storageClient = createAdminSupabaseClient();
   if (!storageClient) return staffErrorPage("PDF service is not configured", "The server-only Supabase service-role credential is missing. Contact an administrator.", 503);
+  const supabase = storageClient;
   const { data: waiver, error } = await supabase.from("camp_nackte_waivers").select("pdf_storage_path, pdf_url, waiver_version").eq("id", waiverId).maybeSingle();
   if (error) return staffErrorPage("Unable to open waiver PDF", "The waiver record could not be loaded. Please try again.", 500);
   if (!waiver) return staffErrorPage("Waiver not found", "The requested waiver record does not exist.", 404);

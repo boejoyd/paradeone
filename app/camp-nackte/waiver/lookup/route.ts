@@ -2,7 +2,6 @@ import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { maskEmail, maskPhone, normalizeCampPhone } from "@/lib/campNackteWaiver";
-import { supabase } from "@/lib/supabase";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 type HistoricalWaiver = {
@@ -20,6 +19,11 @@ type LookupRow = { id: string; legal_name: string; created_at: string };
 type LookupError = { code?: string; message: string; details?: string | null; hint?: string | null };
 type IdentityResolution = { guestId: string | null; purchaseId: string | null; ambiguous: boolean; candidateGuestIds: string[] };
 type MemoryAmbiguitySession = { candidateGuestIds: string[]; expiresAt: number };
+
+// Camp Nackte records are protected by RLS and intentionally have no public
+// database policies. This public route returns only masked/minimal lookup data,
+// so all database access must stay on the trusted server connection.
+const supabase = createAdminSupabaseClient()!;
 
 const memorySessionsKey = "__campNackteAmbiguitySessions";
 
@@ -303,6 +307,10 @@ async function createOrFindGuest(body: Record<string, unknown>) {
 }
 
 export async function POST(request: Request) {
+  if (!supabase) {
+    return NextResponse.json({ error: "The guest lookup service is temporarily unavailable." }, { status: 503 });
+  }
+
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   if (!body) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   if (body.action === "refine") return refineAmbiguousLookup(body);

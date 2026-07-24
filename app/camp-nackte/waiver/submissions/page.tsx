@@ -1,10 +1,11 @@
 import { CampNackteWaiverSubmissionsClient } from "@/components/waiver/CampNackteWaiverSubmissionsClient";
 import { requireUser } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export default async function CampNackteWaiverSubmissionsPage() {
   await requireUser();
-  const supabase = await createServerSupabaseClient();
+  const supabase = createAdminSupabaseClient();
+  if (!supabase) throw new Error("The Camp Nackte waiver service is not configured.");
   const { error: expirationError } = await supabase.from("camp_nackte_waivers").update({ status: "expired" }).eq("status", "current").lte("expires_at", new Date().toISOString());
   if (expirationError) throw new Error(expirationError.message);
   const [{ data: waivers, error }, { data: guests, error: guestsError }, { data: purchases, error: purchasesError }, { data: slots, error: slotsError }] = await Promise.all([

@@ -3,9 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { normalizeCampPhone } from "@/lib/campNackteWaiver";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
-async function staffClient() { await requireUser(); return createServerSupabaseClient(); }
+async function staffClient() {
+  await requireUser();
+  const supabase = createAdminSupabaseClient();
+  if (!supabase) throw new Error("The Camp Nackte waiver service is not configured.");
+  return supabase;
+}
 
 export async function revokeCampWaiver(formData: FormData) {
   const supabase = await staffClient();
