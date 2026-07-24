@@ -61,9 +61,19 @@ Do not commit `.env.local` or real credentials. The application currently requir
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_MAPBOX_TOKEN=
+SUPABASE_SERVICE_ROLE_KEY=
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_WEBHOOK_BASE_URL=
+# Set one sender:
+TWILIO_MESSAGING_SERVICE_SID=
+# TWILIO_FROM_PHONE=
 ```
 
 Set the same names in the Vercel project environment for deployed builds. The `NEXT_PUBLIC_` variables are exposed to browser code, so they must never contain privileged Supabase service-role credentials or other secrets.
+
+See [docs/twilio-sms-setup.md](docs/twilio-sms-setup.md) for the production
+Twilio webhook, sender, consent, and smoke-test setup.
 
 ## Project structure
 
