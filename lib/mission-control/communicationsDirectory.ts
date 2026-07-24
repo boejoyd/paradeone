@@ -1,4 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+export type SmsConsentStatus = "unknown" | "opted_in" | "opted_out";
 
 export type CommunicationsDirectoryIdentity = {
   participantId: string | null;
@@ -11,6 +14,7 @@ export type CommunicationsDirectoryIdentity = {
   volunteerId: string | null;
   unitName: string | null;
   entryNumber: number | null;
+  smsConsentStatus: SmsConsentStatus;
   displayLabel: string;
 };
 
@@ -54,12 +58,16 @@ async function ensureParticipantFromEntry(identity: {
   paradeUnitId: string | null;
   unitName: string | null;
   entryNumber: number | null;
-}): Promise<string | null> {
-  const supabase = await createServerSupabaseClient();
+  smsOptIn: boolean;
+}, databaseClient?: SupabaseClient): Promise<{
+  id: string | null;
+  smsConsentStatus: SmsConsentStatus;
+}> {
+  const supabase = databaseClient ?? (await createServerSupabaseClient());
 
   const { data: existing } = await supabase
     .from("communication_participants")
-    .select("id")
+    .select("id, sms_consent_status")
     .eq("organization_id", identity.organizationId)
     .eq("event_id", identity.eventId)
     .eq("phone_normalized", identity.normalizedPhone)
@@ -69,7 +77,23 @@ async function ensureParticipantFromEntry(identity: {
     .maybeSingle();
 
   if (existing?.id) {
-    return existing.id;
+    if (existing.sms_consent_status === "unknown" && identity.smsOptIn) {
+      await supabase
+        .from("communication_participants")
+        .update({
+          sms_consent_status: "opted_in",
+          sms_consent_updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+
+      return { id: existing.id, smsConsentStatus: "opted_in" };
+    }
+
+    return {
+      id: existing.id,
+      smsConsentStatus:
+        (existing.sms_consent_status as SmsConsentStatus | null) ?? "unknown",
+    };
   }
 
   const { data: inserted, error } = await supabase
@@ -85,31 +109,41 @@ async function ensureParticipantFromEntry(identity: {
       unit_name: identity.unitName,
       entry_number: identity.entryNumber,
       last_seen_phone: identity.normalizedPhone,
+      sms_consent_status: identity.smsOptIn ? "opted_in" : "unknown",
+      sms_consent_updated_at: identity.smsOptIn
+        ? new Date().toISOString()
+        : null,
     })
-    .select("id")
+    .select("id, sms_consent_status")
     .single();
 
   if (error) {
-    return null;
+    return { id: null, smsConsentStatus: identity.smsOptIn ? "opted_in" : "unknown" };
   }
 
-  return inserted?.id ?? null;
+  return {
+    id: inserted?.id ?? null,
+    smsConsentStatus:
+      (inserted?.sms_consent_status as SmsConsentStatus | null) ??
+      (identity.smsOptIn ? "opted_in" : "unknown"),
+  };
 }
 
 export async function lookupCommunicationsIdentityByPhone(
-  phoneRaw: string
+  phoneRaw: string,
+  databaseClient?: SupabaseClient
 ): Promise<CommunicationsDirectoryIdentity | null> {
   const normalizedPhone = normalizePhoneNumber(phoneRaw);
   if (!normalizedPhone) {
     return null;
   }
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = databaseClient ?? (await createServerSupabaseClient());
 
   const { data: participant } = await supabase
     .from("communication_participants")
     .select(
-      "id, organization_id, event_id, participant_type, participant_name, participant_phone, parade_unit_id, volunteer_id, unit_name, entry_number"
+      "id, organization_id, event_id, participant_type, participant_name, participant_phone, parade_unit_id, volunteer_id, unit_name, entry_number, sms_consent_status"
     )
     .eq("phone_normalized", normalizedPhone)
     .eq("is_active", true)
@@ -140,23 +174,21 @@ export async function lookupCommunicationsIdentityByPhone(
       volunteerId: participant.volunteer_id || null,
       unitName,
       entryNumber,
+      smsConsentStatus:
+        (participant.sms_consent_status as SmsConsentStatus | null) ?? "unknown",
       displayLabel: buildDisplayLabel({ senderName, unitName, entryNumber }),
     };
   }
 
-  const { data: entryCandidates } = await supabase
+  const { data: entry } = await supabase
     .from("entries")
     .select(
-      "id, event_id, name, contact_name, contact_phone, parade_number, events!inner(id, organization_id)"
+      "id, event_id, name, contact_name, contact_phone, parade_number, sms_opt_in, events!inner(id, organization_id)"
     )
-    .not("contact_phone", "is", null)
+    .eq("contact_phone_normalized", normalizedPhone)
     .order("created_at", { ascending: false })
-    .limit(250);
-
-  const entry = (entryCandidates ?? []).find((candidate) => {
-    const candidatePhone = normalizePhoneNumber(candidate.contact_phone || "");
-    return candidatePhone === normalizedPhone;
-  });
+    .limit(1)
+    .maybeSingle();
 
   if (!entry) {
     return null;
@@ -172,18 +204,22 @@ export async function lookupCommunicationsIdentityByPhone(
   const entryNumber =
     typeof entry.parade_number === "number" ? entry.parade_number : null;
 
-  const participantId = await ensureParticipantFromEntry({
-    organizationId: event.organization_id,
-    eventId: entry.event_id,
-    senderName,
-    normalizedPhone,
-    paradeUnitId: entry.id,
-    unitName,
-    entryNumber,
-  });
+  const ensuredParticipant = await ensureParticipantFromEntry(
+    {
+      organizationId: event.organization_id,
+      eventId: entry.event_id,
+      senderName,
+      normalizedPhone,
+      paradeUnitId: entry.id,
+      unitName,
+      entryNumber,
+      smsOptIn: entry.sms_opt_in === true,
+    },
+    supabase
+  );
 
   return {
-    participantId,
+    participantId: ensuredParticipant.id,
     organizationId: event.organization_id,
     eventId: entry.event_id,
     senderType: "parade_unit",
@@ -193,15 +229,17 @@ export async function lookupCommunicationsIdentityByPhone(
     volunteerId: null,
     unitName,
     entryNumber,
+    smsConsentStatus: ensuredParticipant.smsConsentStatus,
     displayLabel: buildDisplayLabel({ senderName, unitName, entryNumber }),
   };
 }
 
 export async function recordInboundSmsForParticipant(
   participantId: string,
-  normalizedPhone: string
+  normalizedPhone: string,
+  databaseClient?: SupabaseClient
 ): Promise<void> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = databaseClient ?? (await createServerSupabaseClient());
 
   await supabase
     .from("communication_participants")
@@ -210,4 +248,24 @@ export async function recordInboundSmsForParticipant(
       last_sms_received_at: new Date().toISOString(),
     })
     .eq("id", participantId);
+}
+
+export async function setParticipantSmsConsent(
+  participantId: string,
+  status: Extract<SmsConsentStatus, "opted_in" | "opted_out">,
+  databaseClient?: SupabaseClient
+): Promise<void> {
+  const supabase = databaseClient ?? (await createServerSupabaseClient());
+
+  const { error } = await supabase
+    .from("communication_participants")
+    .update({
+      sms_consent_status: status,
+      sms_consent_updated_at: new Date().toISOString(),
+    })
+    .eq("id", participantId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
