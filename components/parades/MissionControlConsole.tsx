@@ -73,6 +73,7 @@ type CommunicationsChannel =
   | "parade_units"
   | "volunteers"
   | "section_captains";
+type MessageRecipientScope = "channel" | "parade_unit";
 
 type QueueItem = {
   id: string;
@@ -631,6 +632,10 @@ function MissionControlChatPanelWithData({
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendNotice, setSendNotice] = useState<string | null>(null);
   const [sendBySms, setSendBySms] = useState(true);
+  const [recipientScope, setRecipientScope] = useState<MessageRecipientScope>("channel");
+  const [messageDraft, setMessageDraft] = useState("");
+  const [mentionResultsOpen, setMentionResultsOpen] = useState(false);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -660,6 +665,20 @@ function MissionControlChatPanelWithData({
       );
     })
     .slice(0, 8);
+  const selectedUnit = searchableUnits.find((unit) => unit.id === selectedEntryId) ?? null;
+  const mentionMatch = messageDraft.match(/(^|\s)@([^@\n]*)$/);
+  const mentionQuery = mentionMatch?.[2].trim().toLocaleLowerCase() ?? "";
+  const matchingMentionUnits = mentionMatch
+    ? searchableUnits
+        .filter((unit) => {
+          if (!mentionQuery) return true;
+          return (
+            unit.name.toLocaleLowerCase().includes(mentionQuery) ||
+            (unit.paradeNumber !== null && String(unit.paradeNumber).includes(mentionQuery))
+          );
+        })
+        .slice(0, 8)
+    : [];
 
   const selectUnit = (unit: (typeof searchableUnits)[number]) => {
     setSelectedEntryId(unit.id);
@@ -667,6 +686,24 @@ function MissionControlChatPanelWithData({
     setUnitResultsOpen(false);
     setActiveUnitIndex(0);
     setStatusError(null);
+  };
+
+  const selectMentionUnit = (unit: (typeof searchableUnits)[number]) => {
+    const match = messageDraft.match(/(^|\s)@([^@\n]*)$/);
+    const prefix =
+      match && match.index !== undefined
+        ? messageDraft.slice(0, match.index + match[1].length)
+        : messageDraft;
+    const mentionLabel =
+      unit.paradeNumber !== null ? `@#${unit.paradeNumber} ${unit.name}` : `@${unit.name}`;
+
+    selectUnit(unit);
+    setSelectedChannel("parade_units");
+    setRecipientScope("parade_unit");
+    setMessageDraft(`${prefix}${mentionLabel} `);
+    setMentionResultsOpen(false);
+    setActiveMentionIndex(0);
+    window.requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
   const handleUnitKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -740,6 +777,30 @@ function MissionControlChatPanelWithData({
   const channelSenderName = "COC";
 
   const handleComposeKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionResultsOpen && matchingMentionUnits.length > 0) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const delta = event.key === "ArrowDown" ? 1 : -1;
+        setActiveMentionIndex(
+          (current) =>
+            (current + delta + matchingMentionUnits.length) % matchingMentionUnits.length
+        );
+        return;
+      }
+
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        selectMentionUnit(matchingMentionUnits[activeMentionIndex]);
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMentionResultsOpen(false);
+        return;
+      }
+    }
+
     if (event.key !== "Enter" || event.shiftKey) {
       return;
     }
@@ -810,6 +871,10 @@ function MissionControlChatPanelWithData({
     if (!messageBody) {
       return;
     }
+    if (recipientScope === "parade_unit" && !selectedEntryId) {
+      setSendError("Select a parade unit before sending this direct message.");
+      return;
+    }
 
     setIsSending(true);
     setSendError(null);
@@ -829,6 +894,7 @@ function MissionControlChatPanelWithData({
           senderName: channelSenderName,
           messageBody,
           sendSms: sendBySms,
+          paradeUnitId: recipientScope === "parade_unit" ? selectedEntryId : null,
         }),
       });
 
@@ -855,6 +921,8 @@ function MissionControlChatPanelWithData({
         );
       }
       form.reset();
+      setMessageDraft("");
+      setMentionResultsOpen(false);
       textareaRef.current?.focus();
     } catch (error) {
       setSendError(error instanceof Error ? error.message : "Unable to send message.");
@@ -921,7 +989,10 @@ function MissionControlChatPanelWithData({
             <button
               key={channel.key}
               type="button"
-              onClick={() => setSelectedChannel(channel.key)}
+              onClick={() => {
+                setSelectedChannel(channel.key);
+                setRecipientScope("channel");
+              }}
               className={[
                 "rounded-md border px-2.5 py-1.5 text-xs font-semibold transition",
                 selectedChannel === channel.key
@@ -989,6 +1060,45 @@ function MissionControlChatPanelWithData({
             <input type="hidden" name="channel" value={selectedChannel} />
             <input type="hidden" name="messageType" value={channelMessageType} />
             <input type="hidden" name="senderName" value={channelSenderName} />
+
+            <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="mr-1 text-xs font-semibold text-slate-300">Recipient</span>
+              <button
+                type="button"
+                onClick={() => setRecipientScope("channel")}
+                className={[
+                  "rounded-md border px-2.5 py-1 text-xs font-semibold transition",
+                  recipientScope === "channel"
+                    ? "border-blue-400 bg-blue-500/20 text-white"
+                    : "border-slate-600 bg-slate-900 text-slate-300 hover:border-slate-400",
+                ].join(" ")}
+              >
+                Entire {communicationChannels.find((item) => item.key === selectedChannel)?.label ?? "channel"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRecipientScope("parade_unit");
+                  setSelectedChannel("parade_units");
+                  if (!selectedEntryId) setUnitResultsOpen(true);
+                }}
+                className={[
+                  "rounded-md border px-2.5 py-1 text-xs font-semibold transition",
+                  recipientScope === "parade_unit"
+                    ? "border-blue-400 bg-blue-500/20 text-white"
+                    : "border-slate-600 bg-slate-900 text-slate-300 hover:border-slate-400",
+                ].join(" ")}
+              >
+                Specific parade unit
+              </button>
+              {recipientScope === "parade_unit" ? (
+                <span className="text-xs text-sky-200">
+                  {selectedUnit
+                    ? `To ${selectedUnit.paradeNumber !== null ? `#${selectedUnit.paradeNumber} · ` : ""}${selectedUnit.name}`
+                    : "Choose a unit below or type @ in the message"}
+                </span>
+              ) : null}
+            </div>
 
             <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
               <div className="relative min-w-48 flex-1 sm:max-w-xs">
@@ -1082,12 +1192,53 @@ function MissionControlChatPanelWithData({
               </select>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="relative flex items-center gap-1.5">
+              {mentionResultsOpen && matchingMentionUnits.length > 0 ? (
+                <div
+                  role="listbox"
+                  aria-label="Parade unit mentions"
+                  className="absolute bottom-full left-0 z-30 mb-1 max-h-52 w-full max-w-md overflow-auto rounded-md border border-slate-600 bg-slate-800 p-1 shadow-2xl shadow-slate-950/30"
+                >
+                  {matchingMentionUnits.map((unit, index) => (
+                    <button
+                      key={unit.id}
+                      type="button"
+                      role="option"
+                      aria-selected={index === activeMentionIndex}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => selectMentionUnit(unit)}
+                      className={[
+                        "block w-full rounded px-2 py-1.5 text-left text-xs",
+                        index === activeMentionIndex
+                          ? "bg-blue-600 text-white"
+                          : "text-slate-200 hover:bg-slate-700",
+                      ].join(" ")}
+                    >
+                      <span className="block font-semibold">
+                        {unit.paradeNumber !== null ? `#${unit.paradeNumber} · ` : ""}
+                        {unit.name}
+                      </span>
+                      <span className="block text-[11px] opacity-75">
+                        {unit.section || "No section"} · {unit.stagingSpot}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <textarea
                 ref={textareaRef}
                 name="messageBody"
                 rows={1}
-                placeholder="Send a message"
+                value={messageDraft}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setMessageDraft(nextValue);
+                  const hasMentionQuery = /(^|\s)@([^@\n]*)$/.test(nextValue);
+                  setMentionResultsOpen(hasMentionQuery);
+                  setActiveMentionIndex(0);
+                }}
+                onBlur={() => setMentionResultsOpen(false)}
+                placeholder="Send a message · type @ to target a parade unit"
                 onKeyDown={handleComposeKeyDown}
                 className="h-8 min-h-8 flex-1 resize-none rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm leading-5 text-white"
                 disabled={isSending}
