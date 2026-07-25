@@ -108,9 +108,25 @@ export function CampNackteWaiverForm() {
   return <main className="min-h-screen bg-slate-950 px-5 py-8 text-white md:px-8 md:py-12">
     <section className="mx-auto max-w-5xl space-y-8">
       <header className="rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
-        <p className="text-sm uppercase tracking-[0.4em] text-slate-400">Camp Nackte</p>
-        <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">Annual Guest Waiver</h1>
-        <p className="mt-4 text-lg text-slate-300">Verify your guest record first. You only need to sign when your annual waiver is not current.</p>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.4em] text-slate-400">Camp Nackte</p>
+            <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">Annual Guest Waiver</h1>
+            <p className="mt-4 text-lg text-slate-300">Verify your guest record first. You only need to sign when your annual waiver is not current.</p>
+          </div>
+          {result?.currentWaiver ? (
+            <button
+              type="button"
+              onClick={() => {
+                setResult(null);
+                setLookupValue("");
+              }}
+              className="inline-flex shrink-0 self-start rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-500"
+            >
+              Back to Waiver Home
+            </button>
+          ) : null}
+        </div>
       </header>
 
       {!result ? <form onSubmit={lookup} className="rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
@@ -136,16 +152,6 @@ export function CampNackteWaiverForm() {
           <p className="mt-4 text-sm text-slate-300">Signed {new Date(result.currentWaiver.signed_at).toLocaleString()}</p>
           <p className="text-sm text-slate-300">Valid until the exact anniversary: {new Date(result.currentWaiver.expires_at).toLocaleString()}</p>
           <p className="mt-2 text-xs text-slate-400">After that exact timestamp, a new waiver is required before entering or using the property again.</p>
-          <button
-            type="button"
-            onClick={() => {
-              setResult(null);
-              setLookupValue("");
-            }}
-            className="mt-6 inline-flex rounded-xl bg-blue-600 px-6 py-4 text-lg font-semibold text-white hover:bg-blue-500"
-          >
-            Back to Waiver Home
-          </button>
         </section> : <form onSubmit={submit} className="grid gap-8">
           <article className="rounded-3xl bg-white p-6 text-slate-950 md:p-10"><h2 className="text-3xl font-bold">Nackte LLC Waiver</h2><p className="mt-2 text-sm text-slate-500">Version {CAMP_NACKTE_WAIVER_VERSION}</p><div className="mt-8 whitespace-pre-wrap text-[17px] leading-9 text-slate-800">{CAMP_NACKTE_WAIVER_TEXT}</div></article>
           <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
