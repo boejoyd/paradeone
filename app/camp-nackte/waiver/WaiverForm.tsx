@@ -136,6 +136,16 @@ export function CampNackteWaiverForm() {
           <p className="mt-4 text-sm text-slate-300">Signed {new Date(result.currentWaiver.signed_at).toLocaleString()}</p>
           <p className="text-sm text-slate-300">Valid until the exact anniversary: {new Date(result.currentWaiver.expires_at).toLocaleString()}</p>
           <p className="mt-2 text-xs text-slate-400">After that exact timestamp, a new waiver is required before entering or using the property again.</p>
+          <button
+            type="button"
+            onClick={() => {
+              setResult(null);
+              setLookupValue("");
+            }}
+            className="mt-6 inline-flex rounded-xl bg-blue-600 px-6 py-4 text-lg font-semibold text-white hover:bg-blue-500"
+          >
+            Back to Waiver Home
+          </button>
         </section> : <form onSubmit={submit} className="grid gap-8">
           <article className="rounded-3xl bg-white p-6 text-slate-950 md:p-10"><h2 className="text-3xl font-bold">Nackte LLC Waiver</h2><p className="mt-2 text-sm text-slate-500">Version {CAMP_NACKTE_WAIVER_VERSION}</p><div className="mt-8 whitespace-pre-wrap text-[17px] leading-9 text-slate-800">{CAMP_NACKTE_WAIVER_TEXT}</div></article>
           <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6 md:p-8">
