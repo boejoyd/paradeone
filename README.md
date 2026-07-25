@@ -68,12 +68,25 @@ TWILIO_WEBHOOK_BASE_URL=
 # Set one sender:
 TWILIO_MESSAGING_SERVICE_SID=
 # TWILIO_FROM_PHONE=
+QUICKBOOKS_CLIENT_ID=
+QUICKBOOKS_CLIENT_SECRET=
+QUICKBOOKS_REDIRECT_URI=https://www.paradeone.com/api/quickbooks/callback
+QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN=
+QUICKBOOKS_TOKEN_ENCRYPTION_KEY=
+# Comma-separated QuickBooks Product/Service IDs for Camp Nackte day passes:
+QUICKBOOKS_DAY_PASS_ITEM_IDS=
+NEXT_PUBLIC_APP_URL=https://www.paradeone.com
+RESEND_API_KEY=
+CAMP_NACKTE_WAIVER_FROM_EMAIL=Camp Nackte <waivers@example.com>
 ```
 
 Set the same names in the Vercel project environment for deployed builds. The `NEXT_PUBLIC_` variables are exposed to browser code, so they must never contain privileged Supabase service-role credentials or other secrets.
 
 See [docs/twilio-sms-setup.md](docs/twilio-sms-setup.md) for the production
 Twilio webhook, sender, consent, and smoke-test setup.
+
+See [docs/quickbooks-waiver-setup.md](docs/quickbooks-waiver-setup.md) for the
+QuickBooks OAuth, webhook, day-pass item, and production verification steps.
 
 ## Project structure
 

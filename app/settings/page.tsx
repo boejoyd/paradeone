@@ -211,6 +211,25 @@ export default async function SettingsPage() {
           </Card>
         </section>
 
+        {manageableOrganizations.length > 0 ? (
+          <section id="quickbooks">
+            <Card title="QuickBooks">
+              <p className="mt-2 text-slate-300">
+                Connect the Camp Nackte QuickBooks company so paid day passes automatically create admission records and appear beside annual waiver status.
+              </p>
+              <a
+                href="/api/quickbooks/connect"
+                className="mt-5 inline-flex rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-500"
+              >
+                Connect QuickBooks
+              </a>
+              <p className="mt-3 text-xs text-slate-400">
+                Only configured day-pass item IDs are imported. Other QuickBooks sales are ignored.
+              </p>
+            </Card>
+          </section>
+        ) : null}
+
         <Card title="About ParadeOne">
           <p className="mt-2 text-slate-300">
             ParadeOne keeps account permissions scoped to each organization so users only see and operate the parades they are assigned to.

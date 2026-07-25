@@ -6,7 +6,7 @@ import { createCampGuest, linkPassSlotToGuest, markCampGuestIdentityCorrected, r
 
 type Submission = { id: string; guest_id: string | null; full_name: string | null; email: string | null; phone: string | null; visit_date: string | null; waiver_text: string | null; signature_data_url: string | null; signed_at: string; expires_at: string; waiver_version: string; status: string; confirmation_number: string; pdfOpenUrl: string | null };
 type Guest = { id: string; legal_name: string; preferred_name: string | null; email: string | null; phone: string | null; identity_corrected_at: string | null };
-type Purchase = { id: string; purchaser_name: string; purchase_date: string; admission_date: string | null; quantity: number; source: string };
+type Purchase = { id: string; purchaser_name: string; purchase_date: string; admission_date: string | null; quantity: number; source: string; status?: string; match_status?: string; synced_at?: string | null };
 type Slot = { id: string; purchase_id: string; guest_id: string | null; attendee_name: string | null; confirmation_code: string; slot_number: number };
 type Filter = "all" | "current" | "expiring" | "expired" | "superseded" | "revoked";
 
@@ -29,7 +29,9 @@ export function CampNackteWaiverSubmissionsClient({ submissions, guests, purchas
   const [now] = useState(() => Date.now());
   const inThirtyDays = now + 30 * 86400000;
   const currentGuestIds = new Set(submissions.filter((item) => effectiveStatus(item, now) === "current" && item.guest_id).map((item) => item.guest_id));
-  const unmatchedSlots = slots.filter((slot) => !slot.guest_id);
+  const activePurchaseIds = new Set(purchases.filter((purchase) => (purchase.status || "active") === "active").map((purchase) => purchase.id));
+  const activeSlots = slots.filter((slot) => activePurchaseIds.has(slot.purchase_id));
+  const unmatchedSlots = activeSlots.filter((slot) => !slot.guest_id);
   const totals = {
     current: submissions.filter((item) => effectiveStatus(item, now) === "current").length,
     expiring: submissions.filter((item) => effectiveStatus(item, now) === "current" && new Date(item.expires_at).getTime() <= inThirtyDays).length,
@@ -37,8 +39,10 @@ export function CampNackteWaiverSubmissionsClient({ submissions, guests, purchas
     superseded: submissions.filter((item) => item.status === "superseded").length,
     revoked: submissions.filter((item) => item.status === "revoked").length,
     guestsWithoutWaiver: guests.filter((guest) => !currentGuestIds.has(guest.id)).length,
-    purchasesWithoutAttendee: purchases.filter((purchase) => !slots.some((slot) => slot.purchase_id === purchase.id && slot.guest_id)).length,
-    attendeesWithoutWaiver: slots.filter((slot) => slot.guest_id && !currentGuestIds.has(slot.guest_id)).length,
+    purchasesWithoutAttendee: purchases.filter((purchase) => (purchase.status || "active") === "active" && !slots.some((slot) => slot.purchase_id === purchase.id && slot.guest_id)).length,
+    attendeesWithoutWaiver: activeSlots.filter((slot) => slot.guest_id && !currentGuestIds.has(slot.guest_id)).length,
+    ambiguousPurchases: purchases.filter((purchase) => purchase.match_status === "ambiguous").length,
+    inactivePurchases: purchases.filter((purchase) => purchase.status === "voided" || purchase.status === "refunded").length,
   };
 
   const filtered = useMemo(() => submissions.filter((item) => {
@@ -60,7 +64,7 @@ export function CampNackteWaiverSubmissionsClient({ submissions, guests, purchas
   }
 
   return <div className="space-y-6">
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[["Current", totals.current], ["Expiring ≤30 days", totals.expiring], ["Expired", totals.expired], ["Superseded", totals.superseded], ["Revoked", totals.revoked], ["Guests without waiver", totals.guestsWithoutWaiver], ["Purchases without attendee", totals.purchasesWithoutAttendee], ["Attendees without waiver", totals.attendeesWithoutWaiver]].map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><p className="text-xs uppercase tracking-wide text-slate-400">{label}</p><p className="mt-2 text-2xl font-bold">{value}</p></div>)}</div>
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[["Current", totals.current], ["Expiring ≤30 days", totals.expiring], ["Expired", totals.expired], ["Superseded", totals.superseded], ["Revoked", totals.revoked], ["Guests without waiver", totals.guestsWithoutWaiver], ["Purchases without attendee", totals.purchasesWithoutAttendee], ["Attendees without waiver", totals.attendeesWithoutWaiver], ["Ambiguous QuickBooks matches", totals.ambiguousPurchases], ["Refunded / voided passes", totals.inactivePurchases]].map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><p className="text-xs uppercase tracking-wide text-slate-400">{label}</p><p className="mt-2 text-2xl font-bold">{value}</p></div>)}</div>
 
     <section className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><div className="grid gap-3 md:grid-cols-2"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, email, phone, or confirmation" className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3" /><select value={filter} onChange={(event) => setFilter(event.target.value as Filter)} className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3"><option value="all">All statuses</option><option value="current">Current</option><option value="expiring">Expiring within 30 days</option><option value="expired">Expired</option><option value="superseded">Superseded</option><option value="revoked">Revoked</option></select><label className="grid gap-1 text-sm text-slate-300">Signed on or after<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3" /></label><label className="grid gap-1 text-sm text-slate-300">Signed on or before<input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3" /></label></div><p className="mt-3 text-sm text-slate-400">Showing {filtered.length} of {submissions.length} waiver records.</p></section>
 

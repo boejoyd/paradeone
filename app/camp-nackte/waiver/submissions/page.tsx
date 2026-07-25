@@ -11,7 +11,7 @@ export default async function CampNackteWaiverSubmissionsPage() {
   const [{ data: waivers, error }, { data: guests, error: guestsError }, { data: purchases, error: purchasesError }, { data: slots, error: slotsError }] = await Promise.all([
     supabase.from("camp_nackte_waivers").select("id, guest_id, full_name, email, phone, visit_date, waiver_text, signature_data_url, pdf_url, pdf_storage_path, signed_at, expires_at, waiver_version, status, confirmation_number").order("signed_at", { ascending: false }),
     supabase.from("camp_guests").select("id, legal_name, preferred_name, email, phone, identity_corrected_at").order("legal_name"),
-    supabase.from("day_pass_purchases").select("id, purchaser_name, purchase_date, admission_date, quantity, source").order("purchase_date", { ascending: false }),
+    supabase.from("day_pass_purchases").select("id, purchaser_name, purchase_date, admission_date, quantity, source, status, match_status, synced_at").order("purchase_date", { ascending: false }),
     supabase.from("day_pass_attendees").select("id, purchase_id, guest_id, attendee_name, confirmation_code, slot_number").order("created_at", { ascending: false }),
   ]);
   if (error || guestsError || purchasesError || slotsError) throw new Error(error?.message || guestsError?.message || purchasesError?.message || slotsError?.message || "Unable to load the waiver dashboard.");

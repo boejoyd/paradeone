@@ -20,11 +20,11 @@ type AmbiguousLookupResult = {
   message: string;
 };
 
-export function CampNackteWaiverForm() {
+export function CampNackteWaiverForm({ initialConfirmation = "" }: { initialConfirmation?: string }) {
   const router = useRouter();
   const signatureRef = useRef<SignatureCanvas | null>(null);
-  const [lookupType, setLookupType] = useState("phone");
-  const [lookupValue, setLookupValue] = useState("");
+  const [lookupType, setLookupType] = useState(initialConfirmation ? "confirmation" : "phone");
+  const [lookupValue, setLookupValue] = useState(initialConfirmation);
   const [result, setResult] = useState<LookupResult | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
