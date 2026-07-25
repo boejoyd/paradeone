@@ -23,7 +23,7 @@ export default async function CampNackteThankYouPage({ searchParams }: { searchP
             href="/camp-nackte/waiver"
             className="inline-flex rounded-xl bg-blue-600 px-6 py-4 text-lg font-semibold text-white hover:bg-blue-500"
           >
-            Submit Another Waiver
+            Back to Waiver Home
           </Link>
         </div>
       </section>
