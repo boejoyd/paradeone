@@ -20,6 +20,7 @@ type SendMissionControlRequest = {
   senderName?: unknown;
   messageBody?: unknown;
   sendSms?: unknown;
+  paradeUnitId?: unknown;
 };
 
 function parseChannel(value: unknown): MissionControlChannel {
@@ -133,6 +134,7 @@ export async function POST(request: Request) {
   const eventId = String(payload?.eventId || "").trim();
   const senderName = String(payload?.senderName || "").trim();
   const messageBody = String(payload?.messageBody || "").trim();
+  const requestedParadeUnitId = String(payload?.paradeUnitId || "").trim();
 
   if (!organizationId || !messageBody) {
     return NextResponse.json(
@@ -158,6 +160,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Forbidden." }, { status: 403 });
   }
 
+  let targetUnit: { id: string; name: string; parade_number: number | null } | null = null;
+
   if (eventId) {
     const { data: event, error: eventError } = await supabase
       .from("events")
@@ -172,10 +176,33 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
+
+    if (requestedParadeUnitId) {
+      const { data: entry, error: entryError } = await supabase
+        .from("entries")
+        .select("id, name, parade_number")
+        .eq("id", requestedParadeUnitId)
+        .eq("event_id", eventId)
+        .maybeSingle();
+
+      if (entryError || !entry) {
+        return NextResponse.json(
+          { ok: false, error: "Parade unit not found in the active parade." },
+          { status: 404 }
+        );
+      }
+
+      targetUnit = entry;
+    }
+  } else if (requestedParadeUnitId) {
+    return NextResponse.json(
+      { ok: false, error: "An active parade is required for a direct unit message." },
+      { status: 400 }
+    );
   }
 
   try {
-    const channel = parseChannel(payload?.channel);
+    const channel = targetUnit ? "parade_units" : parseChannel(payload?.channel);
     const message = await sendMissionControlMessage({
       organizationId,
       eventId: eventId || null,
@@ -188,6 +215,9 @@ export async function POST(request: Request) {
       messageType: parseMessageType(payload?.messageType),
       source: "app",
       direction: "outbound",
+      paradeUnitId: targetUnit?.id ?? null,
+      unitName: targetUnit?.name ?? null,
+      entryNumber: targetUnit?.parade_number ?? null,
     });
 
     let sms: SmsSendSummary | null = null;
@@ -204,6 +234,7 @@ export async function POST(request: Request) {
             channel,
             missionControlMessageId: message.id,
             body: messageBody,
+            paradeUnitId: targetUnit?.id ?? null,
           });
 
           if (sms.attempted === 0) {
