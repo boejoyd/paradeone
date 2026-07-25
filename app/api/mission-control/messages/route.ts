@@ -238,8 +238,9 @@ export async function POST(request: Request) {
           });
 
           if (sms.attempted === 0) {
-            warning =
-              "Message saved, but there were no opted-in SMS recipients in this channel.";
+            warning = targetUnit
+              ? `Message saved, but ${targetUnit.name} does not have an opted-in SMS contact.`
+              : "Message saved, but there were no opted-in SMS recipients in this channel.";
           } else if (sms.failed > 0) {
             warning = `Message saved. ${sms.sent} text${sms.sent === 1 ? "" : "s"} sent and ${sms.failed} failed.`;
           }
