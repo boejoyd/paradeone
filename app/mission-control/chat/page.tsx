@@ -66,6 +66,11 @@ export default async function MissionControlChatPage() {
       <div className="min-h-[calc(100dvh-5.75rem)]">
         <MissionControlConsole
           view="chat"
+          liveMapSpots={mapData.spots}
+          statusContext={{
+            organizationId: mapData.organizationId,
+            eventId: mapData.eventId,
+          }}
           communications={{
             organizationId: mapData.organizationId,
             eventId: mapData.eventId,
