@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireOrganizationAccess } from "@/lib/auth";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type MissionControlSenderType =
   | "coc"
@@ -35,6 +36,7 @@ export type MissionControlMessage = {
   message_type: MissionControlMessageType;
   direction: MissionControlDirection;
   source: MissionControlSource;
+  provider_message_sid: string | null;
   created_at: string;
 };
 
@@ -63,6 +65,7 @@ export type SendMissionControlMessageInput = {
   messageType?: MissionControlMessageType;
   direction?: MissionControlDirection;
   source?: MissionControlSource;
+  providerMessageSid?: string | null;
 };
 
 const MESSAGE_SELECT = `
@@ -83,6 +86,7 @@ const MESSAGE_SELECT = `
   message_type,
   direction,
   source,
+  provider_message_sid,
   created_at
 `;
 
@@ -171,9 +175,10 @@ export async function listMissionControlMessages(
 }
 
 export async function sendMissionControlMessage(
-  input: SendMissionControlMessageInput
+  input: SendMissionControlMessageInput,
+  databaseClient?: SupabaseClient
 ): Promise<MissionControlMessage> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = databaseClient ?? (await createServerSupabaseClient());
   const messageBody = input.messageBody.trim();
 
   if (!messageBody) {
@@ -199,6 +204,7 @@ export async function sendMissionControlMessage(
       message_type: input.messageType ?? "chat",
       direction: input.direction ?? "outbound",
       source: input.source ?? "app",
+      provider_message_sid: sanitizeText(input.providerMessageSid),
     })
     .select(MESSAGE_SELECT)
     .single();

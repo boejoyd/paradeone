@@ -5,18 +5,21 @@ import {
   sendMissionControlMessage,
   type MissionControlChannel,
   type MissionControlMessageType,
-  type MissionControlSenderType,
 } from "@/lib/mission-control/communications";
+import {
+  sendMissionControlSms,
+  type SmsSendSummary,
+} from "@/lib/mission-control/sms";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type SendMissionControlRequest = {
   organizationId?: unknown;
   eventId?: unknown;
   channel?: unknown;
-  senderType?: unknown;
   messageType?: unknown;
   senderName?: unknown;
   messageBody?: unknown;
+  sendSms?: unknown;
 };
 
 function parseChannel(value: unknown): MissionControlChannel {
@@ -28,15 +31,6 @@ function parseChannel(value: unknown): MissionControlChannel {
     : "broadcast";
 }
 
-function parseSenderType(value: unknown): MissionControlSenderType {
-  return value === "coc" ||
-    value === "parade_unit" ||
-    value === "volunteer" ||
-    value === "section_captain"
-    ? value
-    : "coc";
-}
-
 function parseMessageType(value: unknown): MissionControlMessageType {
   return value === "chat" ||
     value === "status" ||
@@ -44,6 +38,92 @@ function parseMessageType(value: unknown): MissionControlMessageType {
     value === "system"
     ? value
     : "chat";
+}
+
+function toUiMessage(message: {
+  id: string;
+  sender_name: string | null;
+  sender_type: string;
+  channel: string;
+  unit_name: string | null;
+  entry_number: number | null;
+  message_body: string;
+  created_at: string;
+}) {
+  return {
+    id: message.id,
+    senderName: message.sender_name || "COC",
+    senderType:
+      message.sender_type === "float" ? "parade_unit" : message.sender_type,
+    channel: message.channel,
+    unitName: message.unit_name,
+    entryNumber: message.entry_number,
+    messageBody: message.message_body,
+    createdAt: message.created_at,
+  };
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const organizationId = url.searchParams.get("organizationId")?.trim() || "";
+  const eventId = url.searchParams.get("eventId")?.trim() || "";
+
+  if (!organizationId || !eventId) {
+    return NextResponse.json(
+      { ok: false, error: "Organization and event are required." },
+      { status: 400 }
+    );
+  }
+
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
+  }
+
+  const supabase = await createServerSupabaseClient();
+  const { data: event, error: eventError } = await supabase
+    .from("events")
+    .select("id")
+    .eq("id", eventId)
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+
+  if (eventError || !event) {
+    return NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 });
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("organization_members")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (membershipError || !membership) {
+    return NextResponse.json({ ok: false, error: "Forbidden." }, { status: 403 });
+  }
+
+  const { data: messages, error: messagesError } = await supabase
+    .from("mission_control_messages")
+    .select(
+      "id, sender_name, sender_type, channel, unit_name, entry_number, message_body, created_at"
+    )
+    .eq("organization_id", organizationId)
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: true })
+    .limit(200);
+
+  if (messagesError) {
+    return NextResponse.json(
+      { ok: false, error: "Unable to load messages." },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json(
+    { ok: true, messages: (messages ?? []).map(toUiMessage) },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
 
 export async function POST(request: Request) {
@@ -78,14 +158,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Forbidden." }, { status: 403 });
   }
 
+  if (eventId) {
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id")
+      .eq("id", eventId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (eventError || !event) {
+      return NextResponse.json(
+        { ok: false, error: "Event not found." },
+        { status: 404 }
+      );
+    }
+  }
+
   try {
+    const channel = parseChannel(payload?.channel);
     const message = await sendMissionControlMessage({
       organizationId,
       eventId: eventId || null,
       senderUserId: user.id,
-      senderType: parseSenderType(payload?.senderType),
-      channel: parseChannel(payload?.channel),
-      senderName,
+      senderType: "coc",
+      channel,
+      senderName: senderName || "COC",
       senderRole: "COC",
       messageBody,
       messageType: parseMessageType(payload?.messageType),
@@ -93,19 +190,39 @@ export async function POST(request: Request) {
       direction: "outbound",
     });
 
+    let sms: SmsSendSummary | null = null;
+    let warning: string | null = null;
+
+    if (payload?.sendSms === true) {
+      if (!eventId) {
+        warning = "Message saved, but SMS requires an active parade.";
+      } else {
+        try {
+          sms = await sendMissionControlSms({
+            organizationId,
+            eventId,
+            channel,
+            missionControlMessageId: message.id,
+            body: messageBody,
+          });
+
+          if (sms.attempted === 0) {
+            warning =
+              "Message saved, but there were no opted-in SMS recipients in this channel.";
+          } else if (sms.failed > 0) {
+            warning = `Message saved. ${sms.sent} text${sms.sent === 1 ? "" : "s"} sent and ${sms.failed} failed.`;
+          }
+        } catch {
+          warning = "Message saved, but SMS delivery failed.";
+        }
+      }
+    }
+
     return NextResponse.json({
       ok: true,
-      message: {
-        id: message.id,
-        senderName: message.sender_name || "COC",
-        senderType:
-          message.sender_type === "float" ? "parade_unit" : message.sender_type,
-        channel: message.channel,
-        unitName: message.unit_name,
-        entryNumber: message.entry_number,
-        messageBody: message.message_body,
-        createdAt: message.created_at,
-      },
+      message: toUiMessage(message),
+      sms,
+      warning,
     });
   } catch (error) {
     return NextResponse.json(

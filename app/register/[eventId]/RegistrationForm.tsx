@@ -83,6 +83,32 @@ export function RegistrationForm({ eventId }: { eventId: string }) {
 
       <label className="rounded-xl border border-slate-700 bg-slate-950/70 p-4 text-sm text-slate-200">
         <span className="flex items-start gap-3">
+          <input
+            name="smsConsent"
+            value="agree"
+            type="checkbox"
+            className="mt-1 h-4 w-4"
+          />
+          <span className="leading-6">
+            I agree to receive recurring operational text messages from ParadeOne
+            about this parade, including staging, lineup, push-off, and safety
+            updates. Message frequency varies. Message and data rates may apply.
+            Reply STOP to opt out or HELP for help. Consent is not a condition of
+            registration. See the ParadeOne{" "}
+            <Link href="/sms-terms" className="underline underline-offset-2">
+              SMS Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="underline underline-offset-2">
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </span>
+      </label>
+
+      <label className="rounded-xl border border-slate-700 bg-slate-950/70 p-4 text-sm text-slate-200">
+        <span className="flex items-start gap-3">
           <input name="acceptTerms" value="agree" type="checkbox" required className="mt-1 h-4 w-4" />
           <span className="leading-6">
             I confirm that this information is accurate and agree to follow the parade organizer&apos;s participation and safety requirements. I have reviewed the ParadeOne{" "}
