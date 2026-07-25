@@ -124,6 +124,24 @@ export default async function EditEntryPage({ params }: EditEntryPageProps) {
             <input name="contactEmail" type="email" defaultValue={entry.contact_email || ""} className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white" />
           </label>
 
+          <label className="flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <input
+              name="smsOptIn"
+              type="checkbox"
+              defaultChecked={entry.sms_opt_in === true}
+              className="mt-1 h-4 w-4"
+            />
+            <span>
+              <span className="block text-sm font-medium text-slate-200">
+                This contact explicitly agreed to receive operational text messages
+              </span>
+              <span className="mt-1 block text-xs leading-5 text-slate-400">
+                Only enable this after the contact has agreed. Message frequency varies. Message and data rates may apply.
+                Reply STOP to unsubscribe or HELP for help.
+              </span>
+            </span>
+          </label>
+
           <label className="grid gap-2">
             <span className="text-sm font-medium text-slate-300">Estimated Length in Feet</span>
             <input name="estimatedLengthFeet" type="number" min="0" defaultValue={entry.estimated_length_feet || ""} className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white" />
