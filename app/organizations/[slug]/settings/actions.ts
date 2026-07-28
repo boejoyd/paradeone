@@ -11,18 +11,54 @@ import {
 } from "@/lib/auth";
 import {
   canAssignOrganizationRole,
+  canManageOrganizationMember,
   canManageOrganizationUsers,
+  isOrganizationRole,
 } from "@/lib/organizations/permissions";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { supabase } from "@/lib/supabase";
 
 function parseRole(value: FormDataEntryValue | null): OrganizationRole {
   const role = String(value || "").trim();
+  return isOrganizationRole(role) ? role : "volunteer";
+}
 
-  if (role === "owner" || role === "admin" || role === "staff" || role === "volunteer") {
-    return role;
+function settingsPath(organizationSlug: string) {
+  return `/organizations/${organizationSlug}/settings`;
+}
+
+function getAdminClient() {
+  const adminSupabase = createAdminSupabaseClient();
+  if (!adminSupabase) {
+    throw new Error("Team management is not configured on this deployment.");
   }
+  return adminSupabase;
+}
 
-  return "volunteer";
+async function requireTeamManager(organizationId: string) {
+  const access = await requireOrganizationAccess(organizationId);
+  if (!canManageOrganizationUsers(access.role)) {
+    throw new Error("Your organization role cannot manage team members.");
+  }
+  return access;
+}
+
+async function ensureAnotherOwnerExists(
+  organizationId: string,
+  targetMembershipId: string
+) {
+  const adminSupabase = getAdminClient();
+  const { count, error } = await adminSupabase
+    .from("organization_members")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .eq("role", "owner")
+    .neq("id", targetMembershipId);
+
+  if (error) throw new Error(error.message);
+  if (!count) {
+    throw new Error("The final organization owner cannot be demoted or removed.");
+  }
 }
 
 export async function addOrganizationMemberOrInvite(formData: FormData) {
@@ -36,9 +72,9 @@ export async function addOrganizationMemberOrInvite(formData: FormData) {
   }
 
   const user = await requireUser();
-  const access = await requireOrganizationAccess(organizationId);
+  const access = await requireTeamManager(organizationId);
 
-  if (!canManageOrganizationUsers(access.role) || !canAssignOrganizationRole(access.role, role)) {
+  if (!canAssignOrganizationRole(access.role, role)) {
     throw new Error("Your organization role cannot assign that permission level.");
   }
 
@@ -49,7 +85,129 @@ export async function addOrganizationMemberOrInvite(formData: FormData) {
     invitedByUserId: user.id,
   });
 
-  revalidatePath(`/organizations/${organizationSlug}/settings`);
+  revalidatePath(settingsPath(organizationSlug));
+}
+
+export async function updateOrganizationMemberRole(formData: FormData) {
+  const organizationId = String(formData.get("organizationId") || "").trim();
+  const organizationSlug = String(formData.get("organizationSlug") || "").trim();
+  const membershipId = String(formData.get("membershipId") || "").trim();
+  const role = parseRole(formData.get("role"));
+
+  if (!organizationId || !organizationSlug || !membershipId) {
+    throw new Error("Missing team member information.");
+  }
+
+  const access = await requireTeamManager(organizationId);
+  const adminSupabase = getAdminClient();
+  const { data: target, error: targetError } = await adminSupabase
+    .from("organization_members")
+    .select("id, role")
+    .eq("id", membershipId)
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+
+  if (targetError || !target || !isOrganizationRole(target.role)) {
+    throw new Error(targetError?.message || "Team member not found.");
+  }
+
+  if (
+    !canManageOrganizationMember(access.role, target.role) ||
+    !canAssignOrganizationRole(access.role, role)
+  ) {
+    throw new Error("Your organization role cannot make that role change.");
+  }
+
+  if (target.role === "owner" && role !== "owner") {
+    await ensureAnotherOwnerExists(organizationId, membershipId);
+  }
+
+  const { error } = await adminSupabase
+    .from("organization_members")
+    .update({ role })
+    .eq("id", membershipId)
+    .eq("organization_id", organizationId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(settingsPath(organizationSlug));
+}
+
+export async function removeOrganizationMember(formData: FormData) {
+  const organizationId = String(formData.get("organizationId") || "").trim();
+  const organizationSlug = String(formData.get("organizationSlug") || "").trim();
+  const membershipId = String(formData.get("membershipId") || "").trim();
+
+  if (!organizationId || !organizationSlug || !membershipId) {
+    throw new Error("Missing team member information.");
+  }
+
+  const access = await requireTeamManager(organizationId);
+  const adminSupabase = getAdminClient();
+  const { data: target, error: targetError } = await adminSupabase
+    .from("organization_members")
+    .select("id, role")
+    .eq("id", membershipId)
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+
+  if (targetError || !target || !isOrganizationRole(target.role)) {
+    throw new Error(targetError?.message || "Team member not found.");
+  }
+
+  if (!canManageOrganizationMember(access.role, target.role)) {
+    throw new Error("Your organization role cannot remove this team member.");
+  }
+
+  if (target.role === "owner") {
+    await ensureAnotherOwnerExists(organizationId, membershipId);
+  }
+
+  const { error } = await adminSupabase
+    .from("organization_members")
+    .delete()
+    .eq("id", membershipId)
+    .eq("organization_id", organizationId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(settingsPath(organizationSlug));
+}
+
+export async function cancelOrganizationInvite(formData: FormData) {
+  const organizationId = String(formData.get("organizationId") || "").trim();
+  const organizationSlug = String(formData.get("organizationSlug") || "").trim();
+  const inviteId = String(formData.get("inviteId") || "").trim();
+
+  if (!organizationId || !organizationSlug || !inviteId) {
+    throw new Error("Missing invitation information.");
+  }
+
+  const access = await requireTeamManager(organizationId);
+  const adminSupabase = getAdminClient();
+  const { data: invite, error: inviteError } = await adminSupabase
+    .from("organization_invites")
+    .select("id, role")
+    .eq("id", inviteId)
+    .eq("organization_id", organizationId)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (inviteError || !invite || !isOrganizationRole(invite.role)) {
+    throw new Error(inviteError?.message || "Pending invitation not found.");
+  }
+
+  if (!canAssignOrganizationRole(access.role, invite.role)) {
+    throw new Error("Your organization role cannot cancel this invitation.");
+  }
+
+  const { error } = await adminSupabase
+    .from("organization_invites")
+    .update({ status: "cancelled" })
+    .eq("id", inviteId)
+    .eq("organization_id", organizationId)
+    .eq("status", "pending");
+
+  if (error) throw new Error(error.message);
+  revalidatePath(settingsPath(organizationSlug));
 }
 
 type DestructiveActionInput = {
