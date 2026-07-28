@@ -13,7 +13,8 @@ function isPublicPath(pathname: string) {
   if (
     pathname === "/privacy" ||
     pathname === "/terms" ||
-    pathname === "/sms-terms"
+    pathname === "/sms-terms" ||
+    pathname === "/sms-consent"
   ) {
     return true;
   }
