@@ -4,8 +4,8 @@ export default function PrivacyPage() {
   return (
     <LegalPageLayout
       title="Privacy Policy"
-      version="1.0"
-      lastUpdated="July 8, 2026"
+      version="1.1"
+      lastUpdated="July 28, 2026"
     >
       <section>
         <h2 className="text-xl font-semibold">1. Overview</h2>
@@ -49,6 +49,11 @@ export default function PrivacyPage() {
         <p className="mt-2">
           We do not sell phone numbers. We do not share phone numbers with third parties for their independent
           marketing purposes.
+        </p>
+        <p className="mt-2">
+          Mobile information and text messaging originator opt-in data and consent will not be shared with third
+          parties or affiliates for marketing or promotional purposes. This restriction does not prevent ParadeOne
+          from using service providers that process data solely to operate and support the messaging program.
         </p>
       </section>
 
